@@ -65,6 +65,10 @@ typedef bool (*ContactDestroyedCallback)(void* userPersistentData);
 extern ContactDestroyedCallback gContactDestroyedCallback;
 extern ContactProcessedCallback gContactProcessedCallback;
 
+int btScalarSize()
+{
+  return sizeof(btScalar);
+}
 
 std::map<Interaction*, bool> gOrphanedInteractions;
 
@@ -487,9 +491,7 @@ void BulletSpaceFilter::addDynamicObject(SP::BulletDS ds,
   for (CollisionObjects::iterator ico = ds->collisionObjects()->begin();
        ico != ds->collisionObjects()->end(); ++ico)
   {
-    printf("Adding collision object\n");
     btCollisionObject *ob = const_cast<btCollisionObject*>((*ico).first);
-    printf("user pointer: %p\n", ob->getUserPointer());
     _collisionWorld->addCollisionObject(ob);
     _collisionWorld->updateSingleAabb(ob);
     _collisionWorld->getBroadphase()->getOverlappingPairCache()->

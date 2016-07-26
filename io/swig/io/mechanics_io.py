@@ -27,7 +27,7 @@ from siconos.mechanics import joints
 
 try:
     from siconos.mechanics.contact_detection.bullet import \
-        BulletDS, BulletWeightedShape, \
+        BulletDS, BulletWeightedShape, btScalarSize, \
         btCollisionObject, btQuaternion, btTransform, btVector3, quatRotate
 
     from siconos.mechanics.contact_detection.bullet import \
@@ -58,7 +58,7 @@ except:
     pass
 
 from siconos.kernel import \
-    cast_NewtonImpactFrictionNSL, EqualityConditionNSL, Interaction
+    cast_NewtonImpactFrictionNSL, EqualityConditionNSL, Interaction, DynamicalSystem
 
 import siconos.kernel as Kernel
 from siconos.io.io_base import MechanicsIO
@@ -201,7 +201,7 @@ def str_of_file(filename):
 #
 # load .vtp file
 #
-def loadMesh(shape_filename, collision_margin):
+def loadMesh(shape_filename, collision_margin, scale=None):
     """
     loads a vtk .vtp file and returns a Bullet concave shape
     WARNING triangles cells assumed!
@@ -220,12 +220,15 @@ def loadMesh(shape_filename, collision_margin):
     shape = None
 
     if polydata.GetCellType(0) == 5:
-        apoints = np.empty((num_points, 3))
+        apoints = np.empty((num_points, 3), dtype={4:'f4',8:'f8'}[btScalarSize()])
         for i in range(0, points.GetNumberOfTuples()):
             p = points.GetTuple(i)
             apoints[i, 0] = p[0]
             apoints[i, 1] = p[1]
             apoints[i, 2] = p[2]
+
+        if scale is not None:
+            apoints *= scale
 
         aindices = np.empty((num_triangles, 3), dtype=np.int32)
 
@@ -313,9 +316,12 @@ class ShapeCollection():
                             data = self.shape(shape_name)[:][0]
                             tmpf[0].write(data)
                             tmpf[0].flush()
+                            scale = None
+                            if 'scale' in self.attributes(shape_name):
+                                scale = self.attributes(shape_name)['scale']
                             (self._tri[shape_name],
                              self._shapes[shape_name]) = loadMesh(
-                                 tmpf[1], self._collision_margin)
+                                 tmpf[1], self._collision_margin, scale=scale)
                     else:
                         assert False
                 elif self.attributes(shape_name)['type'] in['step']:
@@ -645,7 +651,7 @@ class Hdf5():
 
     def importBRepObject(self, name, translation, orientation,
                          velocity, contactors, mass, given_inertia, body_class,
-                         shape_class, face_class, edge_class):
+                         shape_class, face_class, edge_class, number = None):
 
         if body_class is None:
             body_class = OccBody
@@ -662,6 +668,10 @@ class Hdf5():
         else:
             body = body_class(
                 translation + orientation, velocity, mass, inertia)
+
+            if number is not None:
+                body.setNumber(number)
+
             for contactor in contactors:
 
                 # /!\ shared pointer <-> python ref ...
@@ -683,7 +693,8 @@ class Hdf5():
 
     def importBulletObject(self, name, translation, orientation,
                            velocity, contactors, mass, inertia,
-                           body_class, shape_class, birth=False):
+                           body_class, shape_class, birth=False,
+                           number = None):
 
         
         if body_class is None:
@@ -760,6 +771,9 @@ class Hdf5():
                                   contactors[0].orientation,
                                   contactors[0].group)
 
+                if number is not None:
+                    body.setNumber(number)
+
                 for contactor in contactors[1:]:
                     shape_id = self._shapeid[contactor.name]
 
@@ -831,6 +845,9 @@ class Hdf5():
         that have a specified time of birth <= current time.
         """
 
+        # Ensure we count up from zero for implicit DS numbering
+        DynamicalSystem.resetCount(0)
+
         for shape_name in self._ref:
             self._shapeid[shape_name] = self._ref[shape_name].attrs['id']
             self._number_of_shapes += 1
@@ -845,7 +862,7 @@ class Hdf5():
                 mass = obj.attrs['mass']
                 time_of_birth = obj.attrs['time_of_birth']
 
-                if time_of_birth > time:
+                if time_of_birth >= time:
                     #
                     # in the future
                     #
@@ -913,14 +930,15 @@ class Hdf5():
                             name, floatv(translation), floatv(orientation),
                             floatv(velocity), contactors, float(mass),
                             inertia, body_class, shape_class, face_class,
-                            edge_class)
+                            edge_class,
+                            number = self.instances()[name].attrs['id'])
                     else:
                         # Bullet object
                         self.importBulletObject(
                             name, floatv(translation), floatv(orientation),
                             floatv(velocity), contactors, float(mass),
-                            inertia, body_class, shape_class)
-
+                            inertia, body_class, shape_class,
+                            number = self.instances()[name].attrs['id'])
             # import nslaws
             # note: no time of birth for nslaws and joints
             for name in self._nslaws:
@@ -980,13 +998,15 @@ class Hdf5():
                         floatv(
                             velocity), contactors, float(mass),
                         inertia, body_class, shape_class, face_class,
-                        edge_class)
+                        edge_class, number = self.instances()[name].attrs['id'])
                 else:
                     # Bullet object
                     self.importBulletObject(
                         name, floatv(translation), floatv(orientation),
                         floatv(velocity), contactors, float(mass),
-                        inertia, body_class, shape_class, birth=True)
+                        inertia, body_class, shape_class, birth=True,
+                        number = self.instances()[name].attrs['id'])
+
             #raw_input()
 
     def outputStaticObjects(self):
@@ -1155,7 +1175,7 @@ class Hdf5():
               'precision=', precision,
               'local_precision=', )
 
-    def addMeshFromString(self, name, shape_data):
+    def addMeshFromString(self, name, shape_data, scale=None):
         """
         Add a mesh shape from a string.
         Accepted format : mesh encoded in VTK .vtp format
@@ -1167,20 +1187,29 @@ class Hdf5():
             shape[:] = shape_data
             shape.attrs['id'] = self._number_of_shapes
             shape.attrs['type'] = 'vtp'
+            if scale is not None:
+                shape.attrs['scale'] = scale
             self._shapeid[name] = shape.attrs['id']
             self._number_of_shapes += 1
 
-    def addMeshFromFile(self, name, filename):
+    def addMeshFromFile(self, name, filename, scale=None):
         """
         Add a mesh shape from a file.
         Accepted format : .stl or mesh encoded in VTK .vtp format
         """
+        if filename[0] != os.path.sep:
+            filename = os.path.join(os.path.split(os.path.abspath(sys.argv[0]))[0],
+                                    filename)
         if name not in self._ref:
 
             if os.path.splitext(filename)[-1][1:] == 'stl':
                 reader = vtk.vtkSTLReader()
                 reader.SetFileName(filename)
                 reader.Update()
+
+                if reader.GetErrorCode() != 0:
+                    print('vtkSTLReader error', reader.GetErrorCode())
+                    sys.exit(1)
 
                 with tmpfile() as tmpf:
                     writer = vtk.vtkXMLPolyDataWriter()
@@ -1194,7 +1223,7 @@ class Hdf5():
                 assert os.path.splitext(filename)[-1][1:] == 'vtp'
                 shape_data = str_of_file(filename)
 
-            self.addMeshFromString(name, shape_data)
+            self.addMeshFromString(name, shape_data, scale=scale)
 
     def addBRepFromString(self, name, shape_data):
         """
@@ -1332,7 +1361,7 @@ class Hdf5():
                   translation,
                   orientation=[1, 0, 0, 0],
                   velocity=[0, 0, 0, 0, 0, 0],
-                  mass=0, inertia=None, time_of_birth=0.):
+                  mass=0, inertia=None, time_of_birth=-1):
         """
         Add an object with associated contact shapes that are called
         contactors.
@@ -1433,6 +1462,7 @@ class Hdf5():
             shape_class=None,
             face_class=None,
             edge_class=None,
+            controller=None,
             gravity_scale=1.0,
             t0=0,
             T=10,
@@ -1512,9 +1542,21 @@ class Hdf5():
             dpos_data = self.dynamic_data()
             times = set(dpos_data[:, 0])
             t0 = float(max(times))
-            T = float(t0 + T)
-            print ('restart from previous simulation at t0={0}'.format(t0))
-            print ('run until T={0}'.format(T))
+
+        # Time-related parameters for this simulation run
+        k0 = 1+int(t0/h)
+        k = k0
+        kT = k0+int((T-t0)/h)
+        if T > t0:
+            print('')
+            print('Simulation will run from {0:.4f} to {1:.4f}s, step {2} to step {3} (h={4}, times=[{5},{6}])'
+                  .format(t0, T, k0, kT, h,
+                          min(times) if len(times)>0 else '?',
+                          max(times) if len(times)>0 else '?'))
+            print('')
+        else:
+            print('Simulation time {0} >= T={1}, exiting.'.format(t0,T))
+            exit()
 
         # Model
         #
@@ -1537,16 +1579,16 @@ class Hdf5():
         else:
             osnspb = FrictionContactTrace(3, solver,friction_contact_trace_params,model)
 
-            
         osnspb.numericsSolverOptions().iparam[0] = itermax
 
         if numerics_has_openmp_solvers :
             if  osnspb.numericsSolverOptions().solverId == Numerics.SICONOS_FRICTION_3D_NSGS_OPENMP:
                 n_thread =6
                 osnspb.numericsSolverOptions().iparam[10] = n_thread
-                
 
         osnspb.numericsSolverOptions().internalSolvers.iparam[0] = 10
+        osnspb.numericsSolverOptions().iparam[8] = 1
+        osnspb.numericsSolverOptions().iparam[9] = 1
         osnspb.numericsSolverOptions().dparam[0] = tolerance
         osnspb.setMaxSize(30000)
         osnspb.setMStorageType(1)
@@ -1575,10 +1617,11 @@ class Hdf5():
         simulation.setNewtonMaxIteration(Newton_max_iter)
         simulation.setNewtonTolerance(1e-10)
 
-        k0 = 1 + len(times)
-        k = k0
         print ('import scene ...')
         self.importScene(t0, body_class, shape_class, face_class, edge_class)
+
+        if controller is not None:
+            controller.initialize(self)
 
         model.setSimulation(simulation)
         model.initialize()
@@ -1596,12 +1639,15 @@ class Hdf5():
         self._initializing = False
         while simulation.hasNextEvent():
 
-            print ('step', k, '<', k0 - 1 + int((T - t0) / h))
+            print ('step', k, '<', k0 + int((T - t0) / h))
 
             log(self.importBirths(body_class=body_class,
                                   shape_class=shape_class,
                                   face_class=face_class,
                                   edge_class=edge_class))
+
+            if controller is not None:
+                controller.step()
 
             log(self._broadphase.buildInteractions, with_timer)\
                 (model.currentTime())
