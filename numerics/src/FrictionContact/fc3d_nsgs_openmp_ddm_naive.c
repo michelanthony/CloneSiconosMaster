@@ -74,21 +74,26 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
   FreeSolverNSGSPtr freeSolver = NULL;
   ComputeErrorPtr computeError = NULL;
 
-  /* Connect local solver and local problem*/
-  unsigned int max_threads = omp_get_max_threads();
-
-  FrictionContactProblem **thread_problems = alloca(max_threads*sizeof(void*));
-  SolverOptions ** thread_solver_options = alloca(max_threads*sizeof(void*));
-
-  FrictionContactProblem **interface_local_problems = alloca(max_threads*sizeof(void*));
-  SolverOptions **interface_local_solver_options = alloca(max_threads*sizeof(void*));
-
-
-  if (iparam[10] >0)
+  /* Allocate space for local solver and local problem */
+  unsigned int max_threads = 1;
+#if defined(USE_OPENMP) && defined(_OPENMP)
+  if (iparam[10] > 0)
   {
     max_threads = iparam[10];
     omp_set_num_threads(max_threads);
   }
+  else
+    max_threads = omp_get_max_threads();
+  FrictionContactProblem **thread_problems = alloca(max_threads*sizeof(void*));
+  SolverOptions **thread_solver_options = alloca(max_threads*sizeof(void*));
+  FrictionContactProblem **interface_local_problems = alloca(max_threads*sizeof(void*));
+  SolverOptions **interface_local_solver_options = alloca(max_threads*sizeof(void*));
+#else
+  FrictionContactProblem *thread_problems[1];
+  SolverOptions *thread_solver_options[1];
+  FrictionContactProblem *interface_local_problems[1];
+  SolverOptions *interface_local_solver_options[1];
+#endif
 
   unsigned int p = max_threads;
   unsigned int dnp = nc/(p); // domain size
