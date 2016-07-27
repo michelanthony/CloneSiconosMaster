@@ -876,10 +876,10 @@ int fc3d_nsgs_setDefaultSolverOptions(SolverOptions* options)
   options->dSize = 15;
   options->iparam = (int *)malloc(options->iSize * sizeof(int));
   options->dparam = (double *)malloc(options->dSize * sizeof(double));
-  options->dWork = NULL;
+
+  solver_options_nullify(options);
 
   for (i = 0; i < 15; i++)
-  solver_options_nullify(options);
   {
     options->iparam[i] = 0;
     options->dparam[i] = 0.0;
