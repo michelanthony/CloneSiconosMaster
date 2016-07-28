@@ -194,7 +194,6 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
   int itermax = iparam[0];
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
   if (*info == 0)
     return;
 
@@ -243,7 +242,7 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
 
   for (unsigned int i=0; i < max_threads; i++)
   {
-    printf(" initilialization of interface_local_problem and local solver options\n");
+    if (verbose > 0) printf(" initilialization of interface_local_problem and local solver options\n");
     FrictionContactProblem *interface_local_problem = malloc(sizeof(FrictionContactProblem));
     interface_local_problems[i] = interface_local_problem;
     interface_local_problem->numberOfContacts = 1;
@@ -267,11 +266,11 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
     interface_local_solver_options[i]->iparam = NULL;
     solver_options_copy(localsolver_options,interface_local_solver_options[i]);
 
-    fc3d_nsgs_index_initialize_local_solver(&local_solver, &update_domain_problem,
+    fc3d_nsgs_domain_initialize_local_solver(&local_solver, &update_domain_problem,
                                             (FreeSolverNSGSPtr *)&freeSolver, &computeError,
                                             problem, interface_local_problems[i],
                                             options, interface_local_solver_options[i]);
-    printf(" initilialization of domain_problem and thread solver options\n");
+    if (verbose > 0) printf(" initilialization of domain_problem and thread solver options\n");
 
     FrictionContactProblem *domain_problem = malloc(sizeof(FrictionContactProblem));
     domain_problems[i] = domain_problem;
@@ -392,7 +391,7 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
         for (unsigned int i = 0; i < domains_size[id]; i++ )
         {
           int contact = domains[id][i];
-          fc3d_nsgs_index_computeqLocal(problem, reaction, contact,
+          fc3d_nsgs_domain_computeqLocal(problem, reaction, contact,
                                         domains_out[id], domains_out_size[id],
                                         &(q_k[3*contact]) );
         }
@@ -401,7 +400,7 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
         /* printf("############ normq = %e\t normq_k = %e\n", normq, normq_k); */
 
         /* call nsgs_index  with the right  fc3d_nsgs_computeqLocal*/
-        fc3d_nsgs_index(domain_problems[id],
+        fc3d_nsgs_domain(domain_problems[id],
                         reaction_k, velocity_k,
                         &domain_info, domain_solver_options[id],
                         domains[id], domains_size[id]);
@@ -413,13 +412,13 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
         domain_iter = domain_solver_options[id]->iparam[7];
         #pragma omp critical
         domain_iter_total += domain_iter;
-        error_delta_reaction +=  domain_solver_options[id]->dparam[1];;
+        error_delta_reaction +=  domain_solver_options[id]->dparam[2];
       }
 
       /* normreaction_k = cblas_dnrm2(nc*3 , reaction_k , 1); */
       /* printf("################### normreaction_k = %e \n", normreaction_k); */
 
-      if (verbose > 0) printf("----------------------------------- FC3D - NSGS DDM NAIVE - End of thread problems after %i iterations with error_delta_reaction =%e \n", domain_iter_total, error_delta_reaction);
+      if (verbose > 0) printf("----------------------------------- FC3D - NSGS DDM NAIVE - End of thread problems after %i iterations with  error_delta_reaction =%e \n", domain_iter_total, error_delta_reaction);
     } /* end of thread block */
 
 
@@ -427,14 +426,11 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
     /* ----------------- interface loop ---------------------- */
     /* ------------------------------------------------------- */
     {
-      double error_delta_reaction_interface=0.0;
+      double error_delta_reaction_interface=0.0, error_interface=0.0;
       for (unsigned int i = 0; i < interface_size; i++ )
       {
         int  contact = interface[i];
-        q_k[3*contact]=0.0;
-        q_k[3*contact+1]=0.0;
-        q_k[3*contact+2]=0.0;
-        fc3d_nsgs_index_computeqLocal(problem, reaction_k, contact,
+        fc3d_nsgs_domain_computeqLocal(problem, reaction_k, contact,
                                       interface_out, interface_out_size,
                                       &(q_k[3*contact]));
       }
@@ -487,37 +483,41 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
           }
         }
 
+
+
+
+
+
         /* if (error_delta_reaction_interface < tolerance) interface_hasNotConverged = 0;*/
-        error_delta_reaction_interface = sqrt(error_delta_reaction_interface);
+        error_interface = sqrt(error_delta_reaction_interface);
         double norm_r = cblas_dnrm2(nc*3 , reaction , 1);
         if (fabs(norm_r) > DBL_EPSILON)
-          error_delta_reaction_interface /= norm_r;
+          error_interface /= norm_r;
 
-        if (error_delta_reaction_interface < tolerance)
+        if (error_interface < tolerance)
         {
           interface_hasNotConverged = 0;
           if (verbose > 0)
-            printf("----------------------------------- FC3D - NSGS DDM NAIVE interface - Iteration %i Residual = %14.7e < %7.3e\n", interface_iter, error_delta_reaction_interface, options->dparam[0]);
+            printf("----------------------------------- FC3D - NSGS DDM NAIVE interface - Iteration %i Residual = %14.7e < %7.3e\n", interface_iter, error_interface, options->dparam[0]);
         }
         else
         {
           if (verbose > 0)
-            printf("----------------------------------- FC3D - NSGS DDM NAIVE interface - Iteration %i Residual = %14.7e > %7.3e\n", interface_iter, error_delta_reaction_interface, options->dparam[0]);
+            printf("----------------------------------- FC3D - NSGS DDM NAIVE interface - Iteration %i Residual = %14.7e > %7.3e\n", interface_iter, error_interface, options->dparam[0]);
         }
 
       }
 
       error_delta_reaction+= error_delta_reaction_interface;
-
-      if (verbose > 0)  printf("----------------------------------- FC3D - NSGS DDM NAIVE iter = %i,  error_delta_reaction = %14.7e \n", iter, error_delta_reaction);
-      if (verbose > 0)  printf("----------------------------------- FC3D - NSGS DDM NAIVE iter = %i,  error_delta_reaction_interface = %14.7e \n", iter, error_delta_reaction_interface);
-      //double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+     //double normq = cblas_dnrm2(nc*3 , problem->q , 1);
 
       error_delta_reaction = sqrt(error_delta_reaction);
       double norm_r = cblas_dnrm2(nc*3 , reaction , 1);
 
       if (fabs(norm_r) > DBL_EPSILON)
         error_delta_reaction /= norm_r;
+
+      if (verbose > 0)  printf("----------------------------------- FC3D - NSGS DDM NAIVE iter = %i,  error_delta_reaction = %14.7e \n", iter, error_delta_reaction);
 
 
     }
@@ -566,6 +566,7 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
                                                error, NULL);
     }
   }
+  /* ----------------- end of the global loop --------------- */
 
   dparam[0] = tolerance;
   dparam[1] = error;

@@ -41,18 +41,18 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
 void fc3d_nsgs_error_comparison(FrictionContactProblem* problem, double *reaction,
                                double *velocity, int* info, SolverOptions* options);
 
-void fc3d_nsgs_index_initialize_local_solver(SolverPtr* solve, Update_indexPtr* update,
+void fc3d_nsgs_domain_initialize_local_solver(SolverPtr* solve, Update_indexPtr* update,
                                              FreeSolverNSGSPtr* freeSolver, ComputeErrorPtr* computeError,
                                              FrictionContactProblem* problem,
                                              FrictionContactProblem* localproblem,
                                              SolverOptions * options, SolverOptions * localsolver_options);
 
-void fc3d_nsgs_index_computeqLocal(FrictionContactProblem * problem,
+void fc3d_nsgs_domain_computeqLocal(FrictionContactProblem * problem,
                                    double *reaction, int contact,
                                    unsigned int * index, unsigned int index_size,
                                    double * qLocal);
 
-void fc3d_nsgs_index(FrictionContactProblem* problem,
+void fc3d_nsgs_domain(FrictionContactProblem* problem,
                      double *reaction, double *velocity,
                      int* info, SolverOptions* options,
                      unsigned int* index, unsigned int index_size);

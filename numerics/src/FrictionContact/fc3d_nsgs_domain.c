@@ -34,7 +34,7 @@
 
 
 #include "fc3d_nsgs_openmp.h"
-void fc3d_nsgs_index_computeqLocal(FrictionContactProblem * problem,
+void fc3d_nsgs_domain_computeqLocal(FrictionContactProblem * problem,
                                    double *reaction, int contact,
                                    unsigned int * index, unsigned int index_size,
                                    double * qLocal)
@@ -48,7 +48,7 @@ void fc3d_nsgs_index_computeqLocal(FrictionContactProblem * problem,
 
   if (problem->M->storageType == 0)
   {
-    fprintf(stderr, "Numerics, fc3d_nsgs failed.  : %s.\n");
+    fprintf(stderr, "Numerics, fc3d_nsgs failed.\n");
     exit(EXIT_FAILURE);
   }
   else if (problem->M->storageType == 1)
@@ -72,9 +72,9 @@ void fc3d_nsgs_index_computeqLocal(FrictionContactProblem * problem,
 
 
 
-void fc3d_index_nsgs_update(int contact, FrictionContactProblem* problem, FrictionContactProblem* localproblem,
+void fc3d_nsgs_domain_update(int contact, FrictionContactProblem* problem, FrictionContactProblem* localproblem,
                             double * reaction, SolverOptions* options,
-                            unsigned int * index, unsigned int index_size)
+                            unsigned int * domain, unsigned int domain_size)
 {
   /* Build a local problem for a specific contact
      reaction corresponds to the global vector (size n) of the global problem.
@@ -89,14 +89,14 @@ void fc3d_index_nsgs_update(int contact, FrictionContactProblem* problem, Fricti
 
   /****  Computation of qLocal = qBlock + sum over a row of blocks in MGlobal of the products MLocal.reactionBlock,
      excluding the block corresponding to the current contact. ****/
-  fc3d_nsgs_index_computeqLocal(problem, reaction, contact, index, index_size, localproblem->q);
+  fc3d_nsgs_domain_computeqLocal(problem, reaction, contact, domain, domain_size, localproblem->q);
 
   /* Friction coefficient for current block*/
   localproblem->mu[0] = problem->mu[contact];
 
 
 }
-void fc3d_nsgs_index_initialize_local_solver(SolverPtr* solve, Update_indexPtr* update,
+void fc3d_nsgs_domain_initialize_local_solver(SolverPtr* solve, Update_indexPtr* update,
                                              FreeSolverNSGSPtr* freeSolver, ComputeErrorPtr* computeError,
                                              FrictionContactProblem* problem,
                                              FrictionContactProblem* localproblem,
@@ -110,7 +110,7 @@ void fc3d_nsgs_index_initialize_local_solver(SolverPtr* solve, Update_indexPtr* 
   case SICONOS_FRICTION_3D_ONECONTACT_NSN_AC:
   {
     *solve = &fc3d_onecontact_nonsmooth_Newton_solvers_solve;
-    *update = &fc3d_index_nsgs_update;
+    *update = &fc3d_nsgs_domain_update;
     *freeSolver = (FreeSolverNSGSPtr)&fc3d_onecontact_nonsmooth_Newton_solvers_free;
     *computeError = (ComputeErrorPtr)&fc3d_compute_error;
     fc3d_onecontact_nonsmooth_Newton_solvers_initialize(problem, localproblem, localsolver_options);
@@ -120,7 +120,7 @@ void fc3d_nsgs_index_initialize_local_solver(SolverPtr* solve, Update_indexPtr* 
   case SICONOS_FRICTION_3D_ONECONTACT_NSN_AC_GP:
   {
     *solve = &fc3d_onecontact_nonsmooth_Newton_solvers_solve;
-    *update = &fc3d_index_nsgs_update;
+    *update = &fc3d_nsgs_domain_update;
     *freeSolver = (FreeSolverNSGSPtr)&fc3d_onecontact_nonsmooth_Newton_solvers_free;
     *computeError = (ComputeErrorPtr)&fc3d_compute_error;
     fc3d_onecontact_nonsmooth_Newton_solvers_initialize(problem, localproblem, localsolver_options);
@@ -136,10 +136,10 @@ void fc3d_nsgs_index_initialize_local_solver(SolverPtr* solve, Update_indexPtr* 
 }
 
 
-void fc3d_nsgs_index(FrictionContactProblem* problem,
+void fc3d_nsgs_domain(FrictionContactProblem* problem,
                      double *reaction, double *velocity,
                      int* info, SolverOptions* options,
-                     unsigned int* index, unsigned int index_size)
+                     unsigned int* domain, unsigned int domain_size)
 {
 
   /* int and double parameters */
@@ -155,10 +155,10 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
 
 
 
-  /* printf("start fc3d_nsgs_index\n \n" ); */
-  /* for (int ii=0; ii < index_size; ii++) */
+  /* printf("start fc3d_nsgs_domain\n \n" ); */
+  /* for (int ii=0; ii < domain_size; ii++) */
   /* { */
-  /*   printf("index[%i] = %i\n", ii,index[ii] ); */
+  /*   printf("domain[%i] = %i\n", ii,domain[ii] ); */
   /* } */
 
   if (*info == 0)
@@ -196,7 +196,7 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
     localproblem->M = createNumericsMatrixFromData(NM_DENSE, 3, 3, NULL);
   }
 
-  fc3d_nsgs_index_initialize_local_solver(&local_solver, &update_problem,
+  fc3d_nsgs_domain_initialize_local_solver(&local_solver, &update_problem,
                              (FreeSolverNSGSPtr *)&freeSolver, &computeError,
                              problem , localproblem,
                              options, localsolver_options);
@@ -221,9 +221,9 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
       //cblas_dcopy( n , q , incx , velocity , incy );
       error = 0.0;
 
-      for (unsigned int i= 0 ; i < index_size ; ++i)
+      for (unsigned int i= 0 ; i < domain_size ; ++i)
       {
-        contact = index[i];
+        contact = domain[i];
 
         reactionold[0] = reaction[3 * contact];
         reactionold[1] = reaction[3 * contact + 1];
@@ -232,7 +232,7 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
 
         (*update_problem)(contact, problem, localproblem,
                                    reaction, localsolver_options,
-                                   index, index_size);
+                                   domain, domain_size);
         /* frictionContact_display(localproblem); */
         localsolver_options->iparam[4] = contact;
         (*local_solver)(localproblem, &(reaction[3 * contact]) , localsolver_options);
@@ -254,12 +254,12 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
       {
         hasNotConverged = 0;
         if (verbose > 0)
-          printf("----------------------------------- FC3D - NSGS INDEX - Iteration %i Residual = %14.7e < %7.3e\n", iter, error, options->dparam[0]);
+          printf("----------------------------------- FC3D - NSGS DOMAIN - Iteration %i Residual = %14.7e < %7.3e\n", iter, error, options->dparam[0]);
       }
       else
       {
         if (verbose > 0)
-          printf("----------------------------------- FC3D - NSGS INDEX - Iteration %i Residual = %14.7e > %7.3e\n", iter, error, options->dparam[0]);
+          printf("----------------------------------- FC3D - NSGS DOMAIN - Iteration %i Residual = %14.7e > %7.3e\n", iter, error, options->dparam[0]);
       }
       *info = hasNotConverged;
     }
@@ -271,7 +271,7 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
       {
         if (absolute_error > error)
         {
-          printf("----------------------------------- FC3D - NSGS INDEX - WARNING absolute Residual = %14.7e is larger than incremental error = %14.7e\n", absolute_error, error);
+          printf("----------------------------------- FC3D - NSGS DOMAIN - WARNING absolute Residual = %14.7e is larger than incremental error = %14.7e\n", absolute_error, error);
         }
       }
     }
