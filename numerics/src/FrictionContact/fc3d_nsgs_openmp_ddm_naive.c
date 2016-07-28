@@ -34,7 +34,144 @@
 
 
 #include "fc3d_nsgs_openmp.h"
+void fc3d_nsgs_openmp_ddm_naive_build_interface(unsigned int max_threads, unsigned int nominal_interface_size, unsigned int domain_size, unsigned int  nc,
+                                                unsigned int * interface, unsigned int * interface_size,
+                                                unsigned int * interface_out,   unsigned int * interface_out_size);
 
+void fc3d_nsgs_openmp_ddm_naive_build_interface(unsigned int max_threads , unsigned int nominal_interface_size, unsigned int domain_size,  unsigned int  nc,
+                                                unsigned int * interface, unsigned int * interface_size,
+                                                unsigned int * interface_out,   unsigned int * interface_out_size)
+{
+  unsigned int n_inter=max_threads+1;
+  unsigned int cmp=0;
+
+  for(unsigned int s =0; s< nominal_interface_size/2; s++)
+  {
+    interface[cmp] = s;
+    cmp++;
+  }
+
+  for (unsigned int ii =1 ; ii < n_inter-1 ; ii++)
+  {
+    for(int s =-(int)nominal_interface_size/2 ; s<(int)nominal_interface_size/2; s++)
+    {
+      interface[cmp] = (ii)*domain_size+s;
+      cmp++;
+      if (cmp > *interface_size)
+      {
+        printf("problem in building interface, allocated memory is too small");
+        exit(1);
+      }
+    }
+  }
+
+  for(int s =- (int)nominal_interface_size/2; s <0; s++)
+  {
+    interface[cmp] = nc+s;
+    cmp++;
+    if (cmp > *interface_size)
+    {
+      printf("problem in building interface, allocated memory is too small");
+      exit(1);
+    }
+  }
+  printf("interface_size = %i\n", cmp);
+
+  for (unsigned int ii =0 ; ii < cmp ; ii++)
+  {
+    if (ii%6 ==0)  printf("\n");
+    printf("interface[%i] = %i\t", ii, interface[ii]);
+  }
+  printf("\n");
+
+  *interface_size=cmp;
+
+
+  cmp=0;
+  unsigned int cmp2 =0;
+  for(unsigned int i=0; i<nc; i++)
+  {
+    if (i == interface[cmp])
+    {
+      cmp++;
+    }
+    else
+    {
+     interface_out[cmp2]=i;
+     cmp2++;
+     if (cmp2 > *interface_out_size)
+     {
+       printf("problem in building interface, allocated memory is too small");
+       exit(1);
+     }
+    }
+  }
+  *interface_out_size=cmp2;
+   printf("interface_out_size = %i\n", *interface_out_size);
+
+  for (unsigned int ii =0 ; ii < *interface_out_size ; ii++)
+  {
+    if (ii%6 ==0)  printf("\n");
+    printf("interface_out[%i] = %i\t", ii, interface_out[ii]);
+  }
+  printf("\n");
+}
+void fc3d_nsgs_openmp_ddm_naive_build_domain(unsigned int max_threads , unsigned int nominal_interface_size, unsigned int domain_size,  unsigned int  nc,
+                                             unsigned int ** domains, unsigned int * domains_size,
+                                             unsigned int ** domains_out,   unsigned int * domains_out_size);
+void fc3d_nsgs_openmp_ddm_naive_build_domain(unsigned int max_threads , unsigned int nominal_interface_size, unsigned int domain_size,  unsigned int  nc,
+                                             unsigned int ** domains, unsigned int * domains_size,
+                                             unsigned int ** domains_out,   unsigned int * domains_out_size)
+{
+    int  istart, istop;
+
+    for (unsigned int i=0; i < max_threads; i++)
+    {
+
+      domains[i] = (unsigned int *)malloc((domain_size+1)*sizeof(unsigned int));
+
+      istart = i*domain_size;
+      istop = i*domain_size + domain_size;
+      if (i ==  max_threads-1)  istop =nc;
+      printf("id = %i \t, istart = %i\t istop = %i \n", i, istart, istop);
+      domains[i] = (unsigned int *)malloc((istop-istart)*sizeof(unsigned int));
+      printf("domains building for i = %i\n", i);
+
+      /* contruct index_local */
+      int kk=0;
+      for (int jj = istart; jj < istop; jj++ )
+      {
+        domains[i][kk]=jj;
+        if (jj%6 ==0)  printf("\n");
+        printf("domains[%i][%i] = %i\t",i,kk,domains[i][kk]);
+        kk++;
+      }
+
+      domains_size[i] = kk;
+      printf("\n domains_size[%i] = %i\n",i,domains_size[i]);
+
+      kk = 0;
+      printf("nc-(istop-istart) = %i \n", nc-(istop-istart));
+      domains_out[i] = (unsigned int *)malloc( (nc-(istop-istart)) *sizeof(unsigned int));
+
+      for (int jj = 0; jj < istart; jj++ )
+      {
+        domains_out[i][kk]=jj;
+        kk++;
+      }
+      for (unsigned int jj = istop; jj < nc; jj++ )
+      {
+        domains_out[i][kk]=jj;
+        if (jj%6 ==0)  printf("\n");
+        printf("threadout__index[%i][%i] = %i\t",i,kk,domains_out[i][kk]);
+        kk++;
+      }
+      domains_out_size[i] = kk;
+      printf("\n domains_out_size[%i] = %i\n",i,domains_out_size[i]);
+
+    }
+    //getchar();
+}
 
 void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reaction,
                                double *velocity, int* info, SolverOptions* options)
@@ -70,7 +207,7 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
   SolverOptions * localsolver_options = options->internalSolvers;
 
   SolverPtr local_solver = NULL;
-  Update_indexPtr update_thread_problem = NULL;
+  Update_indexPtr update_domain_problem = NULL;
   FreeSolverNSGSPtr freeSolver = NULL;
   ComputeErrorPtr computeError = NULL;
 
@@ -84,104 +221,24 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
   }
   else
     max_threads = omp_get_max_threads();
-  FrictionContactProblem **thread_problems = alloca(max_threads*sizeof(void*));
-  SolverOptions **thread_solver_options = alloca(max_threads*sizeof(void*));
+  FrictionContactProblem **domain_problems = alloca(max_threads*sizeof(void*));
+  SolverOptions **domain_solver_options = alloca(max_threads*sizeof(void*));
   FrictionContactProblem **interface_local_problems = alloca(max_threads*sizeof(void*));
   SolverOptions **interface_local_solver_options = alloca(max_threads*sizeof(void*));
 #else
-  FrictionContactProblem *thread_problems[1];
-  SolverOptions *thread_solver_options[1];
+  FrictionContactProblem *domain_problems[1];
+  SolverOptions *domain_solver_options[1];
   FrictionContactProblem *interface_local_problems[1];
   SolverOptions *interface_local_solver_options[1];
 #endif
 
-  unsigned int p = max_threads;
-  unsigned int dnp = nc/(p); // domain size
-  // estimation of interface size
-  unsigned int size_inter = dnp/p;// dnp/4; // dnp/(p) ;
-
-  if (p==1)
-    size_inter = dnp/(p+1);
-
-  if (size_inter%2 == 1)
-  {
-    size_inter ++;
-  }
-
-
-  printf("dnp = %i\n", dnp);
-  printf("nc = %i\n", nc);
-  printf("p = %i\n", p);
-  printf("size_inter = %i\n", size_inter);
-  unsigned int interface_index_size =p*size_inter;
-  int n_inter=p+1;
-  unsigned int * interface_index = (unsigned int*) calloc(interface_index_size,sizeof(unsigned int));
-
-  printf("out_size_inter = %i\n",(nc-interface_index_size));
-  unsigned int * interface_out_index = (unsigned int*) calloc((nc-interface_index_size),sizeof(unsigned int));
-  unsigned int cmp =0;
-  for(unsigned int s =0; s< size_inter/2; s++)
-  {
-    interface_index[cmp] = s;
-    cmp++;
-  }
-
-
-  for (int ii =1 ; ii < n_inter-1 ; ii++)
-  {
-    for(int s =-size_inter/2 ; s< (int)size_inter/2; s++)
-    {
-      interface_index[cmp] = (ii)*dnp+s;
-      cmp++;
-    }
-  }
-  for(int s =(int)-size_inter/2; s <0; s++)
-  {
-    interface_index[cmp] = nc+s;
-    cmp++;
-  }
-
-  interface_index_size = cmp;
-  printf("interface_index_size = %i\n", interface_index_size);
-
-  for (unsigned int ii =0 ; ii < interface_index_size ; ii++)
-  {
-    if (ii%6 ==0)  printf("\n");
-    printf("interface_index[%i] = %i\t", ii, interface_index[ii]);
-  }
-  printf("\n");
-  unsigned int interface_out_index_size = 0;
-  cmp=0;
-  for(unsigned int i=0; i<nc; i++)
-  {
-    if (i == interface_index[cmp])
-    {
-      cmp++;
-    }
-    else
-    {
-     interface_out_index[interface_out_index_size]=i;
-     printf("interface_out_index[%i] = %i\t", interface_out_index_size, interface_out_index[interface_out_index_size]);
-     interface_out_index_size++;
-    }
-  }
-
-  for (unsigned int ii =0 ; ii < interface_out_index_size ; ii++)
-  {
-    if (ii%6 ==0)  printf("\n");
-    printf("interface_out_index[%i] = %i\t", ii, interface_out_index[ii]);
-  }
-  printf("\n");
-
-
 
   if (verbose > 0) printf("----------------------------------- number of threads %i\n", omp_get_max_threads()  );
   if (verbose > 0) printf("----------------------------------- number of contacts %i\n", nc );
+
   double * q_k = (double *) malloc(nc*3*sizeof(double));
 
-
-
-  int thread_itermax=options->iparam[12], interface_itermax=options->iparam[13],  thread_iter_total=0;
+  int domain_itermax=options->iparam[12], interface_itermax=options->iparam[13],  domain_iter_total=0;
 
 
   for (unsigned int i=0; i < max_threads; i++)
@@ -210,40 +267,36 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
     interface_local_solver_options[i]->iparam = NULL;
     solver_options_copy(localsolver_options,interface_local_solver_options[i]);
 
-    fc3d_nsgs_index_initialize_local_solver(&local_solver, &update_thread_problem,
+    fc3d_nsgs_index_initialize_local_solver(&local_solver, &update_domain_problem,
                                             (FreeSolverNSGSPtr *)&freeSolver, &computeError,
                                             problem, interface_local_problems[i],
                                             options, interface_local_solver_options[i]);
-    printf(" initilialization of thread_problem and thread solver options\n");
+    printf(" initilialization of domain_problem and thread solver options\n");
 
-    FrictionContactProblem *thread_problem = malloc(sizeof(FrictionContactProblem));
-    thread_problems[i] = thread_problem;
-    thread_problem->M = problem->M;
-    thread_problem->numberOfContacts = nc;
-    thread_problem->dimension = 3;
-    thread_problem->q = q_k;
-    thread_problem->mu = problem->mu;;
+    FrictionContactProblem *domain_problem = malloc(sizeof(FrictionContactProblem));
+    domain_problems[i] = domain_problem;
+    domain_problem->M = problem->M;
+    domain_problem->numberOfContacts = nc;
+    domain_problem->dimension = 3;
+    domain_problem->q = q_k;
+    domain_problem->mu = problem->mu;;
 
 
     /* printSolverOptions(options); */
     /* getchar(); */
 
-    thread_solver_options[i] = malloc(sizeof(SolverOptions));
-    solver_options_nullify(thread_solver_options[i]);
-    solver_options_copy(options, thread_solver_options[i]);
-    thread_solver_options[i]->dparam[0] /= 10.0;
+    domain_solver_options[i] = malloc(sizeof(SolverOptions));
+    solver_options_nullify(domain_solver_options[i]);
+    solver_options_copy(options, domain_solver_options[i]);
+    domain_solver_options[i]->dparam[0] /= 10.0;
 
-    thread_solver_options[i]->iparam[0]=thread_itermax;
-    thread_solver_options[i]->iparam[1]=1; // light error
+    domain_solver_options[i]->iparam[0]=domain_itermax;
+    domain_solver_options[i]->iparam[1]=1; // light error
 
-    /* fc3d_nsgs_index_initialize_local_solver(&local_solver, &update_thread_problem, */
+    /* fc3d_nsgs_index_initialize_local_solver(&local_solver, &update_domain_problem, */
     /*                                   (FreeSolverNSGSPtr *)&freeSolver, &computeError, */
-    /*                                   problem, thread_problems[i], */
-    /*                                   options, thread_solver_options[i]); */
-
-
-
-
+    /*                                   problem, domain_problems[i], */
+    /*                                   options, domain_solver_options[i]); */
 
   }
 
@@ -255,68 +308,56 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
     interface_problem->q = q_k;
     interface_problem->mu = problem->mu;;
 
-    unsigned int ** thread_index =     (unsigned int **)malloc(max_threads*sizeof(unsigned int *));
-    unsigned int ** thread_out_index = (unsigned int **)malloc(max_threads*sizeof(unsigned int *));
 
-    unsigned int * thread_index_size     = (unsigned int *)malloc(max_threads*sizeof(unsigned int));
-    unsigned int * thread_out_index_size = (unsigned int *)malloc(max_threads*sizeof(unsigned int));
+    /***********************************************
+     * build contact domain sets and interface set *
+     ***********************************************/
 
-    int  istart, istop;
+    unsigned int nominal_domain_size = nc/(max_threads); // domain size
+    // estimation of interface size
+    unsigned int nominal_nominal_interface_size = nominal_domain_size/max_threads;// nominal_domain_size/4; // nominal_domain_size/(p) ;
 
-    for (unsigned int i=0; i < max_threads; i++)
+    if (max_threads==1)
+      nominal_nominal_interface_size = nominal_domain_size/(max_threads+1);
+
+    if (nominal_nominal_interface_size%2 == 1)
     {
-
-      thread_index[i] = (unsigned int *)malloc((dnp+1)*sizeof(unsigned int));
-
-      istart = i*dnp;
-      istop = i*dnp + dnp;
-      if (i == p-1)  istop =nc;
-      printf("id = %i \t, istart = %i\t istop = %i \n", i, istart, istop);
-      thread_index[i] = (unsigned int *)malloc((istop-istart)*sizeof(unsigned int));
-      printf("thread_index building for i = %i\n", i);
-
-      /* contruct index_local */
-      int kk=0;
-      for (int jj = istart; jj < istop; jj++ )
-      {
-        thread_index[i][kk]=jj;
-        if (jj%6 ==0)  printf("\n");
-        printf("thread_index[%i][%i] = %i\t",i,kk,thread_index[i][kk]);
-        kk++;
-      }
-
-      thread_index_size[i] = kk;
-      printf("\n thread_index_size[%i] = %i\n",i,thread_index_size[i]);
-
-      kk = 0;
-      printf("nc-(istop-istart) = %i \n", nc-(istop-istart));
-      thread_out_index[i] = (unsigned int *)malloc( (nc-(istop-istart)) *sizeof(unsigned int));
-
-      for (int jj = 0; jj < istart; jj++ )
-      {
-        thread_out_index[i][kk]=jj;
-        kk++;
-      }
-      for (unsigned int jj = istop; jj < nc; jj++ )
-      {
-        thread_out_index[i][kk]=jj;
-        if (jj%6 ==0)  printf("\n");
-        printf("threadout__index[%i][%i] = %i\t",i,kk,thread_out_index[i][kk]);
-        kk++;
-      }
-      thread_out_index_size[i] = kk;
-      printf("\n thread_out_index_size[%i] = %i\n",i,thread_out_index_size[i]);
-
+      nominal_nominal_interface_size ++;
     }
-    //getchar();
 
+    printf("nominal_domain_size = %i\n", nominal_domain_size);
+    printf("nc = %i\n", nc);
+    printf("nominal_nominal_interface_size = %i\n", nominal_nominal_interface_size);
 
-  /*****  NSGS Iterations *****/
-  int iter = 0; /* Current iteration number */
-  double error = 1.; /* Current error */
-  int hasNotConverged = 1;
-  double error_delta_reaction=0.0;
-  double error_nat=0.0;
+    unsigned int interface_size =max_threads*nominal_nominal_interface_size;
+    printf("precomputed interface_size = %i\n", interface_size);
+    unsigned int * interface = (unsigned int*) calloc(interface_size,sizeof(unsigned int));
+    unsigned int interface_out_size = nc-interface_size;
+    printf("precomputed interface_out_size = %i\n", interface_out_size);
+    unsigned int * interface_out = (unsigned int*) calloc((interface_out_size),sizeof(unsigned int));
+
+    fc3d_nsgs_openmp_ddm_naive_build_interface(max_threads , nominal_nominal_interface_size, nominal_domain_size,  nc,
+                                               interface, &interface_size,
+                                               interface_out,   &interface_out_size);
+
+    unsigned int ** domains =     (unsigned int **)malloc(max_threads*sizeof(unsigned int *));
+    unsigned int ** domains_out = (unsigned int **)malloc(max_threads*sizeof(unsigned int *));
+
+    unsigned int * domains_size     = (unsigned int *)malloc(max_threads*sizeof(unsigned int));
+    unsigned int * domains_out_size = (unsigned int *)malloc(max_threads*sizeof(unsigned int));
+
+    fc3d_nsgs_openmp_ddm_naive_build_domain(max_threads , nominal_nominal_interface_size, nominal_domain_size, nc,
+                                            domains, domains_size,
+                                            domains_out, domains_out_size);
+
+    /**********************************************
+     *****  NSGS Iterations ****
+     **********************************************/
+    int iter = 0; /* Current iteration number */
+    double error = 1.; /* Current error */
+    int hasNotConverged = 1;
+    double error_delta_reaction=0.0;
+    double error_nat=0.0;
 
 
   double * reaction_k = (double*)malloc(nc*3*sizeof(double));
@@ -341,18 +382,18 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
 
       #pragma omp  parallel                           \
         shared(reaction, reaction_k, velocity_k, q_k, \
-               thread_problems, thread_solver_options,\
-               thread_index, thread_index_size,       \
-               error_delta_reaction, thread_iter_total)
+               domain_problems, domain_solver_options,\
+               domains, domains_size,       \
+               error_delta_reaction, domain_iter_total)
       {
         int id = omp_get_thread_num();
-        int thread_iter=0;
-        int thread_info =1;
-        for (unsigned int i = 0; i < thread_index_size[id]; i++ )
+        int domain_iter=0;
+        int domain_info =1;
+        for (unsigned int i = 0; i < domains_size[id]; i++ )
         {
-          int contact = thread_index[id][i];
+          int contact = domains[id][i];
           fc3d_nsgs_index_computeqLocal(problem, reaction, contact,
-                                        thread_out_index[id], thread_out_index_size[id],
+                                        domains_out[id], domains_out_size[id],
                                         &(q_k[3*contact]) );
         }
         /* for (unsigned int i =0 ; i < 3*nc; i++) q_k[i] = problem->q[i]; */
@@ -360,25 +401,25 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
         /* printf("############ normq = %e\t normq_k = %e\n", normq, normq_k); */
 
         /* call nsgs_index  with the right  fc3d_nsgs_computeqLocal*/
-        fc3d_nsgs_index(thread_problems[id],
+        fc3d_nsgs_index(domain_problems[id],
                         reaction_k, velocity_k,
-                        &thread_info, thread_solver_options[id],
-                        thread_index[id], thread_index_size[id]);
+                        &domain_info, domain_solver_options[id],
+                        domains[id], domains_size[id]);
 
         /* call nsgs_index  with the right  fc3d_nsgs_computeqLocal*/
-        /* fc3d_nsgs(thread_problems[id], */
+        /* fc3d_nsgs(domain_problems[id], */
         /*           reaction_k, velocity_k, */
-        /*           &thread_info, thread_solver_options[id]); */
-        thread_iter = thread_solver_options[id]->iparam[7];
+        /*           &domain_info, domain_solver_options[id]); */
+        domain_iter = domain_solver_options[id]->iparam[7];
         #pragma omp critical
-        thread_iter_total += thread_iter;
-        error_delta_reaction +=  thread_solver_options[id]->dparam[1];;
+        domain_iter_total += domain_iter;
+        error_delta_reaction +=  domain_solver_options[id]->dparam[1];;
       }
 
       /* normreaction_k = cblas_dnrm2(nc*3 , reaction_k , 1); */
       /* printf("################### normreaction_k = %e \n", normreaction_k); */
 
-      if (verbose > 0) printf("----------------------------------- FC3D - NSGS DDM NAIVE - End of thread problems after %i iterations with error_delta_reaction =%e \n", thread_iter_total, error_delta_reaction);
+      if (verbose > 0) printf("----------------------------------- FC3D - NSGS DDM NAIVE - End of thread problems after %i iterations with error_delta_reaction =%e \n", domain_iter_total, error_delta_reaction);
     } /* end of thread block */
 
 
@@ -387,14 +428,14 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
     /* ------------------------------------------------------- */
     {
       double error_delta_reaction_interface=0.0;
-      for (unsigned int i = 0; i < interface_index_size; i++ )
+      for (unsigned int i = 0; i < interface_size; i++ )
       {
-        int  contact = interface_index[i];
+        int  contact = interface[i];
         q_k[3*contact]=0.0;
         q_k[3*contact+1]=0.0;
         q_k[3*contact+2]=0.0;
         fc3d_nsgs_index_computeqLocal(problem, reaction_k, contact,
-                                      interface_out_index, interface_out_index_size,
+                                      interface_out, interface_out_size,
                                       &(q_k[3*contact]));
       }
       /* double normq_k = cblas_dnrm2(nc*3 , q_k , 1); */
@@ -408,17 +449,17 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
         ++interface_iter;
         error_delta_reaction_interface=0.0;
         #pragma omp parallel for reduction(+:error_delta_reaction_interface)
-        for ( unsigned int i = 0 ; i < interface_index_size ; i++)
+        for ( unsigned int i = 0 ; i < interface_size ; i++)
         {
           unsigned int tid = omp_get_thread_num();
-          int contact = interface_index[i];
+          int contact = interface[i];
 
           if (verbose > 1) printf("----------------------------------- Contact Number %i\n", contact);
 
-          (*update_thread_problem)(contact, interface_problem, interface_local_problems[tid],
+          (*update_domain_problem)(contact, interface_problem, interface_local_problems[tid],
                                    reaction_k,
                                    interface_local_solver_options[tid],
-                                   interface_index, interface_index_size);
+                                   interface, interface_size);
 
           interface_local_solver_options[tid]->iparam[4] = contact;
 
