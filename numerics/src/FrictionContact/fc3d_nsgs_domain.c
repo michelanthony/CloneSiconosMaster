@@ -64,7 +64,7 @@ void fc3d_nsgs_index_computeqLocal(FrictionContactProblem * problem,
   /* for(unsigned int i =0; i < 3; i++) printf("qLocal[%i]= %e\t", i, qLocal[i]); */
   /* printf("\n"); */
 
-  
+
 }
 
 
@@ -126,7 +126,7 @@ void fc3d_nsgs_index_initialize_local_solver(SolverPtr* solve, Update_indexPtr* 
     fc3d_onecontact_nonsmooth_Newton_solvers_initialize(problem, localproblem, localsolver_options);
     break;
   }
- 
+
   default:
   {
     fprintf(stderr, "Numerics, fc3d_nsgs failed. Unknown internal solver : %s.\n", solver_options_id_to_name(localsolver_options->solverId));
@@ -141,7 +141,7 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
                      int* info, SolverOptions* options,
                      unsigned int* index, unsigned int index_size)
 {
-  
+
   /* int and double parameters */
   int* iparam = options->iparam;
   double* dparam = options->dparam;
@@ -154,13 +154,13 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
   double normq = cblas_dnrm2(nc*3 , problem->q , 1);
 
 
-  
+
   /* printf("start fc3d_nsgs_index\n \n" ); */
   /* for (int ii=0; ii < index_size; ii++) */
   /* { */
   /*   printf("index[%i] = %i\n", ii,index[ii] ); */
   /* } */
-  
+
   if (*info == 0)
     return;
 
@@ -171,7 +171,7 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
   assert(options->internalSolvers);
 
   SolverOptions * localsolver_options = options->internalSolvers;
-  
+
   SolverPtr local_solver = NULL;
   Update_indexPtr update_problem = NULL;
   FreeSolverNSGSPtr freeSolver = NULL;
@@ -302,4 +302,3 @@ void fc3d_nsgs_index(FrictionContactProblem* problem,
   }
 
 }
-
