@@ -30,10 +30,10 @@ int main(void)
   SolverOptions * options = (SolverOptions *) malloc(sizeof(SolverOptions));
   info = fc3d_setDefaultSolverOptions(options, SICONOS_FRICTION_3D_NSGS_OPENMP);
   options->dparam[0] = 1e-04;
-  options->iparam[0] = 10000; 
-  options->iparam[10] = 1; //number of threads 
+  options->iparam[0] = 10000;
+  options->iparam[10] = 4; //number of threads
   options->iparam[11] = 2; // methods u
-  options->iparam[12] = 5; // 
+  options->iparam[12] = 5; //  iteration of domain problem
   options->iparam[13] = 10; // iteration of interface problem
   options->internalSolvers->solverId = SICONOS_FRICTION_3D_ONECONTACT_NSN_AC;
   options->internalSolvers->iparam[0]=10;

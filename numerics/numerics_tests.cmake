@@ -560,7 +560,9 @@ if(WITH_${COMPONENT}_TESTING)
 
 
   IF(WITH_OPENMP)
-    NEW_TEST(FC3D_openmp_test1 fc3d_openmp_test1.c) # 
+    NEW_TEST(FC3D_openmp_test1 fc3d_openmp_test1.c) #
+    NEW_FC_TEST(SICONOS_FRICTION_3D_NSGS_OPENMP BoxesStack1-i100000-32.hdf5.dat 1e-4 ${NSGS_NB_IT}
+      SICONOS_FRICTION_3D_ONECONTACT_NSN_AC 1e-14 10)
   ENDIF(WITH_OPENMP)
 
   

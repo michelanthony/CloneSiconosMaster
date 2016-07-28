@@ -287,10 +287,16 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
     domain_solver_options[i] = malloc(sizeof(SolverOptions));
     solver_options_nullify(domain_solver_options[i]);
     solver_options_copy(options, domain_solver_options[i]);
+
+    /* the choice of the accuracy for the domain solver has to be studied in more details */
     domain_solver_options[i]->dparam[0] /= 10.0;
+    /* domain_solver_options[i]->dparam[0] /= max_threads; */
 
     domain_solver_options[i]->iparam[0]=domain_itermax;
-    domain_solver_options[i]->iparam[1]=1; // light error
+    domain_solver_options[i]->iparam[1]=
+      SICONOS_FRICTION_3D_NSGS_LIGHT_ERROR_EVALUATION_WITH_FULL_FINAL; // light with full final  error
+    domain_solver_options[i]->iparam[1]=
+      SICONOS_FRICTION_3D_NSGS_LIGHT_ERROR_EVALUATION; // light error
 
     /* fc3d_nsgs_index_initialize_local_solver(&local_solver, &update_domain_problem, */
     /*                                   (FreeSolverNSGSPtr *)&freeSolver, &computeError, */
@@ -498,12 +504,12 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
         {
           interface_hasNotConverged = 0;
           if (verbose > 0)
-            printf("----------------------------------- FC3D - NSGS DDM NAIVE interface - Iteration %i Residual = %14.7e < %7.3e\n", interface_iter, error_interface, options->dparam[0]);
+            printf("----------------------------------- FC3D - NSGS INTERFACE - Iteration %i Residual = %14.7e < %7.3e\n", interface_iter, error_interface, options->dparam[0]);
         }
         else
         {
           if (verbose > 0)
-            printf("----------------------------------- FC3D - NSGS DDM NAIVE interface - Iteration %i Residual = %14.7e > %7.3e\n", interface_iter, error_interface, options->dparam[0]);
+            printf("----------------------------------- FC3D - NSGS INTERFACE - Iteration %i Residual = %14.7e > %7.3e\n", interface_iter, error_interface, options->dparam[0]);
         }
 
       }
