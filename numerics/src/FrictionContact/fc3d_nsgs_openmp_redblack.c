@@ -120,6 +120,9 @@ void fc3d_nsgs_openmp_redblack(FrictionContactProblem* problem, double *reaction
   int iter = 0; /* Current iteration number */
   double error = 1.; /* Current error */
   int hasNotConverged = 1;
+  int fullGS = 1;
+  if (options->iparam[14] > 0)
+    fullGS = options->iparam[14];
 
   unsigned int *scontacts = NULL;
 
@@ -131,14 +134,14 @@ void fc3d_nsgs_openmp_redblack(FrictionContactProblem* problem, double *reaction
     for (int c=0; c<2; c++)
     {
     #if defined(_OPENMP) && defined(USE_OPENMP)
-    #pragma omp parallel for 
+    #pragma omp parallel for if ((iter%fullGS)!=1)
     #endif
       for ( unsigned int contact = c ; contact < nc ; contact+=2)
       {
-      #if defined(_OPENMP) && defined(USE_OPENMP)
-        unsigned int tid = omp_get_thread_num();
-      #else
         unsigned int tid = 0;
+      #if defined(_OPENMP) && defined(USE_OPENMP)
+        if ((iter%fullGS)!=1)
+          tid = omp_get_thread_num();
       #endif
 
         if (verbose > 1) printf("----------------------------------- Contact Number %i\n", contact);
