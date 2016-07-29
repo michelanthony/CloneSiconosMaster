@@ -51,8 +51,11 @@ void fc3d_nsgs_openmp(FrictionContactProblem* problem, double *reaction,
   }
   else if (iparam[11] == 2)
   {
-
     fc3d_nsgs_openmp_ddm_naive(problem, reaction, velocity, info, options) ;
+  }
+  else if (iparam[11] == 3)
+  {
+    fc3d_nsgs_openmp_iterfor(problem, reaction, velocity, info, options) ;
   }
   else if (iparam[11] == 10)
   {
