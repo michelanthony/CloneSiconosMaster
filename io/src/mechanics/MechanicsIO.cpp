@@ -138,6 +138,22 @@ struct GetVelocity : public SiconosVisitor
   }
 };
 
+struct GetDomain : public SiconosVisitor
+{
+  SP::SiconosVector result;
+
+  template<typename T>
+  void operator()(const T& ds)
+  {
+    result.reset(new SiconosVector(2));
+    result->setValue(0, ds.number());
+    //result->setValue(1, ds.domain());
+
+    // color for now by x>0 ? 1 : 0
+    result->setValue(1, (*ds.q())(0) >= 0);
+  }
+};
+
 struct ForMu : public Question<double>
 {
     ANSWER(NewtonImpactFrictionNSL, mu());
@@ -269,6 +285,17 @@ SP::SimpleMatrix MechanicsIO::velocities(const Model& model) const
   typedef
     Visitor < Classes < LagrangianDS, NewtonEulerDS >,
               GetVelocity>::Make Getter;
+
+  return visitAllVerticesForVector<Getter>
+    (*model.nonSmoothDynamicalSystem()->topology()->dSG(0));
+}
+
+
+SP::SimpleMatrix MechanicsIO::domains(const Model& model) const
+{
+  typedef
+    Visitor < Classes < LagrangianDS, NewtonEulerDS >,
+              GetDomain>::Make Getter;
 
   return visitAllVerticesForVector<Getter>
     (*model.nonSmoothDynamicalSystem()->topology()->dSG(0));

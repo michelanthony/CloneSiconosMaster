@@ -55,6 +55,8 @@ def usage():
        initial up direction of the camera (default=y-axis)
      --ortho=scale
        start in ortho mode with given parallel scale (default=perspective)
+     --color=random|domain
+       method to color objects (default=random)
     """
 
 
@@ -74,7 +76,7 @@ try:
                                    ['help', 'dat', 'tmin=', 'tmax=', 'no-cf',
                                     'cf-scale=', 'normalcone-ratio=','vtk-export',
                                     'advance=','fps=','camera=','lookat=','up=',
-                                    'ortho='])
+                                    'ortho=','color='])
 except getopt.GetoptError, err:
         sys.stderr.write('{0}\n'.format(str(err)))
         usage()
@@ -91,6 +93,7 @@ advance_by_time = None
 frames_per_second = 25
 cf_disable = False
 initial_camera = [None]*4
+coloring = 'random'
 
 for o, a in opts:
 
@@ -136,6 +139,9 @@ for o, a in opts:
 
     elif o == '--ortho':
         initial_camera[3] = float(a)
+
+    elif o == '--color':
+        coloring = a
 
 if frames_per_second == 0:
     frames_per_second = 25
@@ -301,20 +307,30 @@ shape = dict()
 pos = dict()
 instances = dict()
 
+domain_colors = []
+def domain_color(domain):
+    while domain >= len(domain_colors):
+        domain_colors.append(random_color())
+    return domain_colors[domain]
+
 with Hdf5(io_filename=io_filename, mode='r') as io:
 
     def load():
 
         ispos_data = io.static_data()
         idpos_data = io.dynamic_data()
+        try:
+            idom_data = io.domains()
+        except ValueError:
+            idom_data = None
 
         icf_data = io.contact_forces_data()[:]
 
         isolv_data = io.solver_data()
 
-        return ispos_data, idpos_data, icf_data, isolv_data
+        return ispos_data, idpos_data, idom_data, icf_data, isolv_data
 
-    spos_data, dpos_data, cf_data, solv_data = load()
+    spos_data, dpos_data, dom_data, cf_data, solv_data = load()
 
     # contact forces provider
     class CFprov():
@@ -880,11 +896,17 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
     def set_actors_visibility(id_t):
         for instance, actor in actors.items():
             if instance < 0 or instance in pos_data[id_t,1]:
-                #actor.GetProperty().SetColor(0,0,1)
                 actor.VisibilityOn()
             else:
-                #actor.GetProperty().SetColor(0,1,0)
                 actor.VisibilityOff()
+
+    def set_actors_domain_color(id_t):
+        if dom_data is None:
+            return
+        for instance, actor in actors.items():
+            dom = dom_data[id_t,2][numpy.where(dom_data[id_t,1]==instance)[0]]
+            if len(dom)>0:
+                actor.GetProperty().SetColor(*domain_color(int(dom[0])))
 
     if not vtk_export_mode:
         if cf_prov is not None:
@@ -904,7 +926,8 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
         except IOError as e:
             pass
 
-        id_t0 = numpy.where(dpos_data[:, 0] == min(dpos_data[:, 0]))
+        t0 = min(dpos_data[:, 0])
+        id_t0 = numpy.where(dpos_data[:, 0] == t0)
 
         if numpy.shape(spos_data)[0] >0 :
             set_positionv(spos_data[:, 1], spos_data[:, 2], spos_data[:, 3],
@@ -917,6 +940,10 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
             pos_data[id_t0, 7], pos_data[id_t0, 8])
 
         set_actors_visibility(id_t0)
+
+        if dom_data is not None and coloring=='domain':
+            id_t0 = numpy.where(dom_data[:, 0] == t0)[0]
+            set_actors_domain_color(id_t0)
 
         renderer_window.AddRenderer(renderer)
         interactor_renderer.SetRenderWindow(renderer_window)
@@ -1081,9 +1108,12 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
     #                          spos_data[:, 5], spos_data[:, 6], spos_data[:, 7],
     #                          spos_data[:, 8])
 
-                id_t = numpy.where(pos_data[:, 0] == self._times[index])
-
+                id_t = numpy.where(pos_data[:, 0] == self._times[index])[0]
                 set_actors_visibility(id_t)
+
+                if dom_data is not None and coloring=='domain':
+                  id_t = numpy.where(dom_data[:, 0] == self._times[index])[0]
+                  set_actors_domain_color(id_t)
 
                 set_positionv(
                     pos_data[id_t, 1], pos_data[id_t, 2], pos_data[id_t, 3],
@@ -1120,7 +1150,7 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
                 print 'key', key
 
                 if key == 'r':
-                    spos_data, dpos_data, cf_data, solv_data = load()
+                    spos_data, dpos_data, dom_data, cf_data, solv_data = load()
                     if not cf_disable:
                         cf_prov = CFprov(cf_data)
                     times = list(set(dpos_data[:, 0]))
@@ -1138,14 +1168,17 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
                         contact_posa.Update()
                         contact_posb.SetInputData(cf_prov._output)
                         contact_posb.Update()
-                    id_t0 = numpy.where(
-                        dpos_data[:, 0] == min(dpos_data[:, 0]))
+                    t0 = min(dpos_data[:, 0])
+                    id_t0 = numpy.where(dpos_data[:, 0] == t0)
                     contact_pos_force.Update()
                     contact_pos_norm.Update()
 
                     pos_data = dpos_data[:].copy()
                     min_time = times[0]
                     set_actors_visibility(id_t0)
+                    if dom_data is not None and coloring=='domain':
+                        id_t0 = numpy.where(dom_data[:, 0] == t0)[0]
+                        set_actors_domain_color(id_t0)
 
                     max_time = times[len(times) - 1]
 

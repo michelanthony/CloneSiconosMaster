@@ -56,6 +56,13 @@ public:
   */
   SP::SimpleMatrix velocities(const Model& model) const;
 
+  /** get all domains: domain number (color) of object for domain decomposition methods
+   * \param model the model
+      \return a matrix where the columns are id, domain
+      id is the DynamicalSystem number + 1
+  */
+  SP::SimpleMatrix domains(const Model& model) const;
+
   /** get the coordinates of all contact points, normals, reactions and velocities
    * \param model the model
       \return a matrix where the columns are mu x y z, nx, ny, nz, rx, ry, rz, vx, vy, vz, ox, oy, oz, id

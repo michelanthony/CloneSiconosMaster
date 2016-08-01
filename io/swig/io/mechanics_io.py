@@ -518,6 +518,7 @@ class Hdf5():
         self._out = None
         self._data = None
         self._joints = None
+        self._domain_data = None
         self._io = MechanicsIO()
         self._set_external_forces = set_external_forces
         self._shape_filename = shape_filename
@@ -637,6 +638,15 @@ class Hdf5():
         Joints between dynamic objects or between an object and the scenery.
         """
         return self._joints
+
+    def domains(self):
+        """
+        Domain coloring information for instances by time
+        """
+        if self._domain_data is None:
+            self._domain_data = data(self._data, 'domain', 3,
+                                     use_compression = self._use_compression)
+        return self._domain_data
 
     def importNonSmoothLaw(self, name):
         if self._broadphase is not None:
@@ -1098,6 +1108,26 @@ class Hdf5():
                     np.concatenate((times,
                                     contact_points),
                                    axis=1)
+
+    def outputDomains(self):
+        """
+        Outputs domains of objects.
+        """
+
+        current_line = self._dynamic_data.shape[0]
+
+        time = self.currentTime()
+
+        domains = self._io.domains(self._broadphase.model())
+
+        if domains is not None:
+            domain_data = self.domains()
+            domain_data.resize(current_line + domains.shape[0], 0)
+
+            times = np.empty((domains.shape[0], 1))
+            times.fill(time)
+
+            domain_data[current_line:, :] = np.concatenate((times, domains), axis=1)
 
     def outputSolverInfos(self):
         """
@@ -1628,6 +1658,7 @@ class Hdf5():
         print ('first output static and dynamic objects ...')
         self.outputStaticObjects()
         self.outputDynamicObjects()
+        self.outputDomains()
 
         # nsds = model.nonSmoothDynamicalSystem()
         # nds= nsds.getNumberOfDS()
@@ -1662,6 +1693,8 @@ class Hdf5():
                 log(self.outputVelocities, with_timer)()
 
                 log(self.outputContactForces, with_timer)()
+
+                log(self.outputDomains, with_timer)()
 
                 log(self.outputSolverInfos, with_timer)()
 
