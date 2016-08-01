@@ -29,6 +29,11 @@
 
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 
+
+
+//#define USE_OPENMP_HERE 1
+
+
 void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
                           double *velocity, int* info, SolverOptions* options,
                           unsigned int max_threads,
@@ -197,16 +202,18 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
       /* Loop through the contact points */
       //cblas_dcopy( n , q , incx , velocity , incy );
       /* for (unsigned int kk=0; kk < 3*nc; kk++ ) reaction_k[kk]=reaction[kk]; */
-
-      #pragma omp  parallel                           \
+#ifdef USE_OPENMP_HERE
+      #pragma omp  parallel                             \
         shared(reaction, reaction_k, velocity_k, q_k,   \
                domain_problems, domain_solver_options,  \
                domains, domains_size,                   \
                error_delta_reaction, domain_iter_total)
-      /* for (int id =0; id < max_threads; id++) */
-      /* { */
       {
         int id = omp_get_thread_num();
+#else
+        for (int id =0; id < (int)max_threads; id++)
+      {
+#endif
         int domain_iter =0;
         int domain_info =1;
         for (unsigned int i = 0; i < domains_size[id]; i++ )
@@ -231,7 +238,9 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
         /*           reaction_k, velocity_k, */
         /*           &domain_info, domain_solver_options[id]); */
         domain_iter = domain_solver_options[id]->iparam[7];
+#ifdef USE_OPENMP_HERE
         #pragma omp critical
+#endif
         {
         domain_iter_total += domain_iter;
         error_delta_reaction +=  domain_solver_options[id]->dparam[2];
@@ -271,7 +280,9 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
       {
         ++interface_iter;
         error_delta_reaction_interface=0.0;
-        #pragma omp parallel for reduction(+:error_delta_reaction_interface)
+#ifdef USE_OPENMP_HERE
+         #pragma omp parallel for reduction(+:error_delta_reaction_interface)
+#endif
         for ( unsigned int i = 0 ; i < *interface_size ; i++)
         {
           unsigned int tid = omp_get_thread_num();
