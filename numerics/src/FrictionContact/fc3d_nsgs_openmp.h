@@ -41,6 +41,14 @@ void fc3d_nsgs_openmp_ddm_naive(FrictionContactProblem* problem, double *reactio
 void fc3d_nsgs_openmp_iterfor(FrictionContactProblem* problem, double *reaction,
                               double *velocity, int* info, SolverOptions* options);
 
+void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
+                          double *velocity, int* info, SolverOptions* options,
+                          unsigned int max_threads,
+                          unsigned int ** domains, unsigned int * domains_size,
+                          unsigned int ** domains_out,   unsigned int * domains_out_size,
+                          unsigned int * interface, unsigned int * interface_size,
+                          unsigned int * interface_out,   unsigned int * interface_out_size);
+
 void fc3d_nsgs_error_comparison(FrictionContactProblem* problem, double *reaction,
                                double *velocity, int* info, SolverOptions* options);
 

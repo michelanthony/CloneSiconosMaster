@@ -15,24 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
-#include "fc3d_onecontact_nonsmooth_Newton_solvers.h"
-#include "fc3d_Path.h"
-#include "fc3d_NCPGlockerFixedPoint.h"
-#include "fc3d_projection.h"
-#include "fc3d_unitary_enumerative.h"
-#include "fc3d_compute_error.h"
-#include "NCP_Solvers.h"
-#include "SiconosBlas.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
-#include <assert.h>
-#include <time.h>
-#include <alloca.h>
-
-#pragma GCC diagnostic ignored "-Wmissing-prototypes"
-
+#include "fc3d_Solvers.h"
 #include "fc3d_nsgs_openmp.h"
+
+
 
 void fc3d_nsgs_openmp(FrictionContactProblem* problem, double *reaction,
                                double *velocity, int* info, SolverOptions* options)

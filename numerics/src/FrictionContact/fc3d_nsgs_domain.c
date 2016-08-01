@@ -254,12 +254,14 @@ void fc3d_nsgs_domain(FrictionContactProblem* problem,
       {
         hasNotConverged = 0;
         if (verbose > 0)
-          printf("----------------------------------- FC3D - NSGS DOMAIN - Iteration %i Residual = %14.7e < %7.3e\n", iter, error, options->dparam[0]);
+          printf("----------------------------------- FC3D - NSGS DOMAIN [%i,%i] - Iteration %i Residual = %14.7e < %7.3e\n",
+                 domain[0], domain[domain_size-1], iter, error, options->dparam[0]);
       }
       else
       {
         if (verbose > 0)
-          printf("----------------------------------- FC3D - NSGS DOMAIN - Iteration %i Residual = %14.7e > %7.3e\n", iter, error, options->dparam[0]);
+          printf("----------------------------------- FC3D - NSGS DOMAIN [%i,%i] - Iteration %i Residual = %14.7e > %7.3e\n",
+                 domain[0], domain[domain_size-1], iter, error, options->dparam[0]);
       }
       *info = hasNotConverged;
     }
