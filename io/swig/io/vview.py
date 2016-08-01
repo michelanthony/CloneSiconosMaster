@@ -21,6 +21,7 @@ def usage():
     {0} [--help] [tmin=<float value>] [tmax=<float value>]
         [--cf-scale=<float value>] [--no-cf] [--vtk-export]
         [--advance=<'fps' or float value>] [--fps=float value]
+        [--camera=x,y,z] [--lookat=x,y,z] [--up=x,y,z] [--ortho=scale]
         <hdf5 file>
     """
     print """
@@ -46,6 +47,14 @@ def usage():
        automatically advance time during recording (default : don't advance)
      --fps= value
        frames per second of generated video (default 25)
+     --camera=x,y,z
+       initial position of the camera (default=above looking down)
+     --lookat=x,y,z
+       initial direction to look (default=center of bounding box)
+     --up=x,y,z
+       initial up direction of the camera (default=y-axis)
+     --ortho=scale
+       start in ortho mode with given parallel scale (default=perspective)
     """
 
 
@@ -64,7 +73,8 @@ try:
     opts, args = getopt.gnu_getopt(sys.argv[1:], '',
                                    ['help', 'dat', 'tmin=', 'tmax=', 'no-cf',
                                     'cf-scale=', 'normalcone-ratio=','vtk-export',
-                                    'advance=','fps='])
+                                    'advance=','fps=','camera=','lookat=','up=',
+                                    'ortho='])
 except getopt.GetoptError, err:
         sys.stderr.write('{0}\n'.format(str(err)))
         usage()
@@ -80,6 +90,7 @@ view_cycle = -1
 advance_by_time = None
 frames_per_second = 25
 cf_disable = False
+initial_camera = [None]*4
 
 for o, a in opts:
 
@@ -113,6 +124,18 @@ for o, a in opts:
 
     elif o == '--fps':
         frames_per_second = int(a)
+
+    elif o == '--camera':
+        initial_camera[0] = map(float,a.split(','))
+
+    elif o == '--lookat':
+        initial_camera[1] = map(float,a.split(','))
+
+    elif o == '--up':
+        initial_camera[2] = map(float,a.split(','))
+
+    elif o == '--ortho':
+        initial_camera[3] = float(a)
 
 if frames_per_second == 0:
     frames_per_second = 25
@@ -854,6 +877,15 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
     pos_data = dpos_data[:].copy()
     spos_data = spos_data[:].copy()
 
+    def set_actors_visibility(id_t):
+        for instance, actor in actors.items():
+            if instance < 0 or instance in pos_data[id_t,1]:
+                #actor.GetProperty().SetColor(0,0,1)
+                actor.VisibilityOn()
+            else:
+                #actor.GetProperty().SetColor(0,1,0)
+                actor.VisibilityOff()
+
     if not vtk_export_mode:
         if cf_prov is not None:
             for mu in cf_prov._mu_coefs:
@@ -884,6 +916,8 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
             pos_data[id_t0, 4], pos_data[id_t0, 5], pos_data[id_t0, 6],
             pos_data[id_t0, 7], pos_data[id_t0, 8])
 
+        set_actors_visibility(id_t0)
+
         renderer_window.AddRenderer(renderer)
         interactor_renderer.SetRenderWindow(renderer_window)
         interactor_renderer.GetInteractorStyle(
@@ -909,6 +943,17 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
 
         # Set the occlusion ratio (initial value is 0.0, exact image)
         renderer.SetOcclusionRatio(0.1)
+
+        # Set the initial camera position and orientation if specified
+        if initial_camera[0] is not None:
+            renderer.GetActiveCamera().SetPosition(*initial_camera[0])
+        if initial_camera[1] is not None:
+            renderer.GetActiveCamera().SetFocalPoint(*initial_camera[1])
+        if initial_camera[2] is not None:
+            renderer.GetActiveCamera().SetViewUp(*initial_camera[2])
+        if initial_camera[3] is not None:
+            renderer.GetActiveCamera().ParallelProjectionOn()
+            renderer.GetActiveCamera().SetParallelScale(initial_camera[3])
 
         # callback maker for scale manipulation
         def make_scale_observer(glyphs):
@@ -1038,13 +1083,7 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
 
                 id_t = numpy.where(pos_data[:, 0] == self._times[index])
 
-                for instance, actor in actors.items():
-                    if instance < 0 or instance in pos_data[id_t,1]:
-                        #actor.GetProperty().SetColor(0,0,1)
-                        actor.VisibilityOn()
-                    else:
-                        #actor.GetProperty().SetColor(0,1,0)
-                        actor.VisibilityOff()
+                set_actors_visibility(id_t)
 
                 set_positionv(
                     pos_data[id_t, 1], pos_data[id_t, 2], pos_data[id_t, 3],
@@ -1106,6 +1145,7 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
 
                     pos_data = dpos_data[:].copy()
                     min_time = times[0]
+                    set_actors_visibility(id_t0)
 
                     max_time = times[len(times) - 1]
 
@@ -1146,6 +1186,9 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
                         print 'camera position:', self._renderer.GetActiveCamera().GetPosition()
                         print 'camera focal point', self._renderer.GetActiveCamera().GetFocalPoint()
                         print 'camera clipping plane', self._renderer.GetActiveCamera().GetClippingRange()
+                        print 'camera up vector', self._renderer.GetActiveCamera().GetViewUp()
+                        if self._renderer.GetActiveCamera().GetParallelProjection()!=0:
+                            print 'camera parallel scale', self._renderer.GetActiveCamera().GetParallelScale()
 
                 if key == 'o':
                         self._renderer.GetActiveCamera().SetParallelProjection(
