@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <assert.h>
+#include <float.h>
 
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 
