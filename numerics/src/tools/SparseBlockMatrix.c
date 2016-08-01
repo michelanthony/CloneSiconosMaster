@@ -849,8 +849,8 @@ void rowProdNoDiagSBM3x3_index_block(unsigned int sizeX, unsigned int sizeY, uns
      of the block is, in A->block, but it requires a set to 0 of all y
      components
   */
-  int  index_in_row_size = 0;
-  int max_colNumber=0;
+  int index_in_row_size = 0;
+  unsigned int max_colNumber=0;
   for (size_t blockNum = A->index1_data[currentRowNumber];
        blockNum < A->index1_data[currentRowNumber + 1];
        ++blockNum)
@@ -899,7 +899,7 @@ void rowProdNoDiagSBM3x3_index_block(unsigned int sizeX, unsigned int sizeY, uns
   /*      ++blockNum) */
 
   size_t blockNum;
-  for (int i = 0 ; i < intersection_index_size; i++)
+  for (unsigned int i = 0 ; i < intersection_index_size; i++)
   {
     /* Get row/column position of the current block */
     colNumber = intersection_index[i][0];
