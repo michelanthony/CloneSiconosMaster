@@ -2,13 +2,13 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-void array_print(int * idx, int idx_size)
+void int_array_print(int * idx, int idx_size)
 {
   printf("[");
   for (int i = 0; i <  idx_size; i++  ) printf("%i ", idx[i]);
   printf("]\n");
 }
-void array_of_array_print(int ** idx, int idx_size, int array_size)
+void int_array_of_array_print(int ** idx, int idx_size, int array_size)
 {
   printf("[");
   for (int i = 0; i <  idx_size; i++  )
@@ -17,6 +17,24 @@ void array_of_array_print(int ** idx, int idx_size, int array_size)
     for (int j = 0; j < array_size  ; j++  ) printf("%i ", idx[i][j]);
     printf("] ");
   } 
+  printf("]\n");
+}
+
+void uint_array_print(unsigned int * idx, unsigned int idx_size)
+{
+  printf("[");
+  for (unsigned int i = 0; i <  idx_size; i++  ) printf("%i ", idx[i]);
+  printf("]\n");
+}
+void uint_array_of_array_print(unsigned int ** idx, unsigned int idx_size, unsigned int array_size)
+{
+  printf("[");
+  for (unsigned int i = 0; i <  idx_size; i++  )
+  {
+    printf("[");
+    for (unsigned int j = 0; j < array_size  ; j++  ) printf("%i ", idx[i][j]);
+    printf("] ");
+  }
   printf("]\n");
 }
 
@@ -84,6 +102,8 @@ void array_intersection(int * arr1, int * arr2, int m, int n, int * intersection
   }
   *intersection_set_size = size;
 }
+
+
 
 /* Function prints union of arr1[] and arr2[]
    m is the number of elements in arr1[]
@@ -154,7 +174,61 @@ void array_union(int arr1[], int arr2[], int m, int n, int * union_set, int * un
   //printf(" %d ", arr2[j++]);
   
 }
- 
+
+
+
+void uint_array_of_array_intersection_with_array(unsigned int * arr1, unsigned int ** arr2, unsigned int m, unsigned int n,
+                                                 unsigned int array_size, unsigned int pos,  unsigned int ** intersection_set, unsigned int * intersection_set_size )
+{
+  unsigned int i = 0, j = 0;
+  unsigned int size= 0;
+  while (i < m && j < n)
+  {
+    if (arr1[i] < arr2[j][pos])
+      i++;
+    else if (arr2[j][pos] < arr1[i])
+      j++;
+    else /* if arr1[i] == arr2[j] */
+    {
+      intersection_set[size][0] = arr2[j++][0];
+      for (unsigned int k=1;  k< array_size ; k++)
+        intersection_set[size][k] = arr2[j-1][k];
+      size++;
+      i++;
+    }
+  }
+  *intersection_set_size = size;
+}
+
+
+void uint_array_intersection(unsigned int * arr1, unsigned int * arr2, unsigned int m, unsigned int n,
+                             unsigned int * intersection_set, unsigned int * intersection_set_size )
+{
+
+  unsigned int i = 0, j = 0;
+  unsigned int size= 0;
+  while (i < m && j < n)
+  {
+    if (arr1[i] < arr2[j])
+      i++;
+    else if (arr2[j] < arr1[i])
+      j++;
+    else /* if arr1[i] == arr2[j] */
+    {
+      /* printf(" %d ", arr2[j++]); */
+      intersection_set[size] = arr2[j++];
+      size++;
+      i++;
+    }
+  }
+  *intersection_set_size = size;
+}
+
+
+
+
+
+
 /* /\* Driver program to test above function *\/ */
 /* int main() */
 /* { */

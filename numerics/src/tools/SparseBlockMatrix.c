@@ -862,13 +862,13 @@ void rowProdNoDiagSBM3x3_index_block(unsigned int sizeX, unsigned int sizeY, uns
   /* printf("index_in_row_size = %i\n",index_in_row_size );  */
   /* printf("max_colNumber = %i\n",max_colNumber); */
   
-  int ** index_in_row = (int ** )malloc(index_in_row_size * sizeof(int*));
+  unsigned int ** index_in_row = (unsigned int ** )malloc(index_in_row_size * sizeof(unsigned int*));
   int i_k=0;
   for (size_t blockNum = A->index1_data[currentRowNumber];
        blockNum < A->index1_data[currentRowNumber + 1];
        ++blockNum)
   {
-    index_in_row[i_k] = (int*) malloc(2* sizeof(int));
+    index_in_row[i_k] = (unsigned int*) malloc(2* sizeof(unsigned int));
     colNumber = A->index2_data[blockNum];
     index_in_row[i_k][0] =  colNumber;
     index_in_row[i_k][1] = blockNum;
@@ -885,11 +885,12 @@ void rowProdNoDiagSBM3x3_index_block(unsigned int sizeX, unsigned int sizeY, uns
   /* array_print(index_block, index_block_size); */
 
 
-  int ** intersection_index = (int **)malloc(index_in_row_size * sizeof(int *)); // could be improved.
+  unsigned int ** intersection_index = (unsigned int **)malloc(index_in_row_size * sizeof(unsigned int *)); // could be improved.
   for (int k =0; k < index_in_row_size; k++ )
-    intersection_index[k] = (int*) malloc(2* sizeof(int));
-  int intersection_index_size=0;
-  array_of_array_intersection_with_array(index_block, index_in_row, index_block_size, index_in_row_size, 2, 0, intersection_index, &intersection_index_size  );
+    intersection_index[k] = (unsigned int*) malloc(2* sizeof(unsigned int));
+  unsigned int intersection_index_size=0;
+  uint_array_of_array_intersection_with_array(index_block, index_in_row, index_block_size, index_in_row_size, 2, 0,
+                                              intersection_index, &intersection_index_size  );
   /* printf("intersection= "); */
   /* array_of_array_print(intersection_index, intersection_index_size, 2); */
 
@@ -2303,7 +2304,6 @@ int sparseToSBM(int blocksize, const CSparseMatrix* const sparseMat, SparseBlock
 
     if ((blockindex < blockindexmax) && (blocknum[blockindex] >= 0))
     {
-
       /* this is an non empty block */
 
       /* index1_data[rowNumber]<= blockNumber */
