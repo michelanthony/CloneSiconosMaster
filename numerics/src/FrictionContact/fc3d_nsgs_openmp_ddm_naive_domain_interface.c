@@ -66,6 +66,10 @@ void fc3d_nsgs_openmp_ddm_naive_build_interface(unsigned int max_threads , unsig
   uint_array_print(interface,*interface_size );
   cmp=0;
   unsigned int cmp2 =0;
+  /* Warning: we assume for the moment the index of the interface component that
+   * the indices if the interface are ordered.
+   */
+
   for(unsigned int i=0; i<nc; i++)
   {
     if (i == interface[cmp])
