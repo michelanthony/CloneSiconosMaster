@@ -805,7 +805,7 @@ void SBM_row_prod_no_diag_3x3(unsigned int sizeX, unsigned int sizeY, unsigned i
   }
 }
 
-void rowProdNoDiagSBM3x3_index_block(unsigned int sizeX, unsigned int sizeY, unsigned int currentRowNumber,
+void SBM_row_prod_no_diag_3x3_index_block(unsigned int sizeX, unsigned int sizeY, unsigned int currentRowNumber,
                                      const SparseBlockStructuredMatrix* const A, double* const x, double* y,
                                      unsigned int * index_block, int index_block_size)
 {
@@ -814,7 +814,7 @@ void rowProdNoDiagSBM3x3_index_block(unsigned int sizeX, unsigned int sizeY, uns
      i and column j (Warning: i and j are indices of block position,
      not scalar component positions)
 
-     Then rowProdNoDiagSBM computes y = sum for i not equal to j of
+     Then SBM_row_prod_no_diag computes y = sum for i not equal to j of
      Aij.xj over a row of blocks (or += if init = false)
 
      currentRowNumber represents the position (block number) of the

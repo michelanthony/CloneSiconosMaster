@@ -255,9 +255,9 @@ extern "C"
       \param[in] init = 0 for y += Ax
   */
   void SBM_row_prod_no_diag_3x3(unsigned int sizeX, unsigned int sizeY, unsigned int currentRowNumber, const SparseBlockStructuredMatrix* const A, double* const x, double* y);
-  void rowProdNoDiagSBM3x3_index_block(unsigned int sizeX, unsigned int sizeY, unsigned int currentRowNumber,
-                                     const SparseBlockStructuredMatrix* const A, double* const x, double* y,
-                                       unsigned int * index_block, int index_block_size);
+  void SBM_row_prod_no_diag_3x3_index_block(unsigned int sizeX, unsigned int sizeY, unsigned int currentRowNumber,
+                                            const SparseBlockStructuredMatrix* const A, double* const x, double* y,
+                                            unsigned int * index_block, int index_block_size);
 
 
   /** Destructor for SparseBlockStructuredMatrix objects

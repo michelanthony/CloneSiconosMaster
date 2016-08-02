@@ -57,27 +57,27 @@ int main(void)
   {
     q[i] = i + 1;
   }
-  printf("test rowProdNoDiagSBM\n");
+  printf("test SBM_row_prod_no_diag\n");
   for(unsigned int j =0; j<m; j++) y[j]=0.0;
   for(unsigned int blockRow =0; blockRow < M.blocknumber0; blockRow++)
   {
-    rowProdNoDiagSBM(m, 3, blockRow, &M, q, &yref[3*blockRow],0);
+    SBM_row_prod_no_diag(m, 3, blockRow, &M, q, &yref[3*blockRow],0);
   }
   for(int j =0; j<6; j++) printf("yref[%i] = %e\n", j, yref[j]);
   double normref = cblas_dnrm2(m , yref , 1);
   printf("normref  = %e \n", normref);
 
-  printf("\ntest rowProdNoDiagSBM3x3 on row Block  0\n");
+  printf("\ntest SBM_row_prod_no_diag_3x3 on row Block  0\n");
   for(unsigned int j =0; j<3; j++) y3[j]=0.0;
-  rowProdNoDiagSBM3x3(m, 3, 0, &M, q, y3);
+  SBM_row_prod_no_diag_3x3(m, 3, 0, &M, q, y3);
   for(unsigned int j =0; j<3; j++) printf("y3[%i] = %e\n", j, y3[j]);
 
 
-  printf("\ntest rowProdNoDiagSBM\n");
+  printf("\ntest SBM_row_prod_no_diag\n");
   for(unsigned int j =0; j<m; j++) y[j]=0.0;
   for(unsigned int blockRow =0; blockRow < M.blocknumber0; blockRow++)
   {
-    rowProdNoDiagSBM(m, 3, blockRow, &M, q, &y[3*blockRow],0);
+    SBM_row_prod_no_diag(m, 3, blockRow, &M, q, &y[3*blockRow],0);
   }
   for(int j =0; j<6; j++) printf("y[%i] = %e\n", j, y[j]);
 
@@ -93,11 +93,11 @@ int main(void)
 
 
 
-  printf("\ntest rowProdNoDiagSBM3x3 on all row Blocks\n");
+  printf("\ntest SBM_row_prod_no_diag_3x3 on all row Blocks\n");
   for(unsigned int j =0; j<m; j++) y[j]=0.0;
   for(unsigned int blockRow =0; blockRow < M.blocknumber0; blockRow++)
   {
-    rowProdNoDiagSBM3x3(m, 3, blockRow, &M, q, &y[3*blockRow]);
+    SBM_row_prod_no_diag_3x3(m, 3, blockRow, &M, q, &y[3*blockRow]);
   }
   for(int j =0; j<6; j++) printf("y[%i] = %e\n", j, y[j]);
   for (i = 0; i < m; i++)
@@ -115,7 +115,7 @@ int main(void)
 
 
 
-  printf("\ntest rowProdNoDiagSBM3x3_index_block for full index\n");
+  printf("\ntest SBM_row_prod_no_diag_3x3_index_block for full index\n");
   for(unsigned int j =0; j<m; j++) y[j]=0.0;
   unsigned int * index = (unsigned int *) malloc(M.blocknumber0*sizeof(unsigned int));
   for(unsigned int blockRow =0; blockRow < M.blocknumber0; blockRow++)
@@ -124,7 +124,7 @@ int main(void)
   }
   for(unsigned int blockRow =0; blockRow < M.blocknumber0; blockRow++)
   {
-    rowProdNoDiagSBM3x3_index_block(m, 3, blockRow, &M, q, &y[3*blockRow],index,M.blocknumber0);
+    SBM_row_prod_no_diag_3x3_index_block(m, 3, blockRow, &M, q, &y[3*blockRow],index,M.blocknumber0);
   }
   for(int j =0; j<6; j++) printf("y[%i] = %e\n", j, y[j]);
   for (i = 0; i < m; i++)
@@ -136,16 +136,16 @@ int main(void)
   printf("normtmp  = %e \n", normtmp);
 
 
-  printf("\ntest rowProdNoDiagSBM3x3_index_block for empty index\n");
+  printf("\ntest SBM_row_prod_no_diag_3x3_index_block for empty index\n");
   for(unsigned int j =0; j<m; j++) y[j]=0.0;
   for(unsigned int blockRow =0; blockRow < M.blocknumber0; blockRow++)
   {
-    rowProdNoDiagSBM3x3_index_block(m, 3, blockRow, &M, q, &y[3*blockRow],index,0);
+    SBM_row_prod_no_diag_3x3_index_block(m, 3, blockRow, &M, q, &y[3*blockRow],index,0);
   }
   for(int j =0; j<6; j++) printf("y[%i] = %e\n", j, y[j]);
 
 
-  printf("\ntest rowProdNoDiagSBM3x3_index_block for a given index\n");
+  printf("\ntest SBM_row_prod_no_diag_3x3_index_block for a given index\n");
 
   for(unsigned int blockRow =0; blockRow < 10; blockRow++)
   {
@@ -175,13 +175,13 @@ int main(void)
   uint_array_print(index_out, index_out_size );
   for(unsigned int blockRow =0; blockRow < M.blocknumber0; blockRow++)
   {
-    rowProdNoDiagSBM3x3_index_block(m, 3, blockRow, &M, q, &y[3*blockRow],index,10);
+    SBM_row_prod_no_diag_3x3_index_block(m, 3, blockRow, &M, q, &y[3*blockRow],index,10);
   }
   for(int j =3*20; j<3*20+6; j++) printf("y[%i] = %e\n", j, y[j]);
 
   for(unsigned int blockRow =0; blockRow < M.blocknumber0; blockRow++)
   {
-    rowProdNoDiagSBM3x3_index_block(m, 3, blockRow, &M, q, &y[3*blockRow],index_out,index_out_size);
+    SBM_row_prod_no_diag_3x3_index_block(m, 3, blockRow, &M, q, &y[3*blockRow],index_out,index_out_size);
   }
   for(int j =0; j<6; j++) printf("y[%i] = %e\n", j, y[j]);
 
