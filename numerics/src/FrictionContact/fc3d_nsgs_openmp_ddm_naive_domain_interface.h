@@ -16,16 +16,17 @@
  * limitations under the License.
 */
 
+#include "fc3d_nsgs_openmp_ddm.h"
 
 
-void fc3d_nsgs_openmp_ddm_naive_build_interface(unsigned int max_threads, unsigned int nominal_interface_size, unsigned int domain_size, unsigned int  nc,
+void fc3d_nsgs_openmp_ddm_naive_build_interface(unsigned int number_of_domains, unsigned int nominal_interface_size, unsigned int domain_size, unsigned int  nc,
                                                 unsigned int * interface, unsigned int * interface_size,
                                                 unsigned int * interface_out,   unsigned int * interface_out_size);
 
-void fc3d_nsgs_openmp_ddm_naive_build_domain(unsigned int max_threads , unsigned int nominal_interface_size, unsigned int domain_size,  unsigned int  nc,
+void fc3d_nsgs_openmp_ddm_naive_build_domain(unsigned int number_of_domains , unsigned int nominal_interface_size, unsigned int domain_size,  unsigned int  nc,
                                              unsigned int ** domains, unsigned int * domains_size,
                                              unsigned int ** domains_out,   unsigned int * domains_out_size);
 
-/* void fc3d_nsgs_openmp_ddm_naive_build_domain_interface(unsigned int max_threads, unsigned int nominal_interface_size, unsigned int domain_size, unsigned int  nc, */
-/*                                                 unsigned int * interface, unsigned int * interface_size, */
-/*                                                 unsigned int * interface_out,   unsigned int * interface_out_size); */
+void fc3d_nsgs_openmp_ddm_naive_build_domain_interface(unsigned int  nc,
+                                                       unsigned number_of_domains,
+                                                       Ddm_domain_interface * domain_interface);

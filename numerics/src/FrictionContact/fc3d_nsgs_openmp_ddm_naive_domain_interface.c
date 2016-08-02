@@ -21,11 +21,11 @@
 #include "stdio.h"
 #include "stdlib.h"
 
-void fc3d_nsgs_openmp_ddm_naive_build_interface(unsigned int max_threads , unsigned int nominal_interface_size, unsigned int domain_size,  unsigned int  nc,
+void fc3d_nsgs_openmp_ddm_naive_build_interface(unsigned int number_of_domains , unsigned int nominal_interface_size, unsigned int domain_size,  unsigned int  nc,
                                                 unsigned int * interface, unsigned int * interface_size,
                                                 unsigned int * interface_out,   unsigned int * interface_out_size)
 {
-  unsigned int n_inter=max_threads+1;
+  unsigned int n_inter=number_of_domains+1;
   unsigned int cmp=0;
 
   for(unsigned int s =0; s< nominal_interface_size/2; s++)
@@ -60,10 +60,6 @@ void fc3d_nsgs_openmp_ddm_naive_build_interface(unsigned int max_threads , unsig
   }
 
   *interface_size=cmp;
-  printf("interface_size = %i\n", cmp);
-  printf("interface[%i] = %i\n", cmp-1, interface[cmp-1]);
-  printf("interface =");
-  uint_array_print(interface,*interface_size );
   cmp=0;
   unsigned int cmp2 =0;
   /* Warning: we assume for the moment the index of the interface component that
@@ -88,29 +84,26 @@ void fc3d_nsgs_openmp_ddm_naive_build_interface(unsigned int max_threads , unsig
     }
   }
   *interface_out_size=cmp2;
-  printf("interface_out_size = %i\n", *interface_out_size);
-  printf("interface_out[%i] = %i\n", cmp2-1, interface_out[cmp2-1]);
-  printf("interface_out =");
-  uint_array_print(interface_out,*interface_out_size );
+
 
 }
 
-void fc3d_nsgs_openmp_ddm_naive_build_domain(unsigned int max_threads , unsigned int nominal_interface_size,
+void fc3d_nsgs_openmp_ddm_naive_build_domain(unsigned int number_of_domains , unsigned int nominal_interface_size,
                                              unsigned int domain_size,  unsigned int  nc,
                                              unsigned int ** domains, unsigned int * domains_size,
                                              unsigned int ** domains_out,   unsigned int * domains_out_size)
 {
     int  istart, istop;
 
-    for (unsigned int i=0; i < max_threads; i++)
+    for (unsigned int i=0; i < number_of_domains; i++)
     {
 
       domains[i] = (unsigned int *)malloc((domain_size+1)*sizeof(unsigned int));
 
       istart = i*domain_size;
       istop = i*domain_size + domain_size;
-      if (i ==  max_threads-1)  istop =nc;
-      printf("id = %i \t, istart = %i\t istop = %i \n", i, istart, istop);
+      if (i ==  number_of_domains-1)  istop =nc;
+      /* printf("id = %i \t, istart = %i\t istop = %i \n", i, istart, istop); */
       domains[i] = (unsigned int *)malloc((istop-istart)*sizeof(unsigned int));
       /* contruct index_local */
       int kk=0;
@@ -120,9 +113,6 @@ void fc3d_nsgs_openmp_ddm_naive_build_domain(unsigned int max_threads , unsigned
         kk++;
       }
       domains_size[i] = kk;
-      printf("domains_size[%i] = %i\n",i,domains_size[i]);
-      printf("domains[%i] = ", i);
-      uint_array_print(domains[i],domains_size[i]);
 
       kk = 0;
       //printf("nc-(istop-istart) = %i \n", nc-(istop-istart));
@@ -138,18 +128,50 @@ void fc3d_nsgs_openmp_ddm_naive_build_domain(unsigned int max_threads , unsigned
         domains_out[i][kk]=jj;
         kk++;
       }
-
       domains_out_size[i] = kk;
-      printf("domains_out_size[%i] = %i\n",i,domains_out_size[i]);
-      printf("domains_out[%i] = ", i);
-      uint_array_print(domains_out[i],domains_out_size[i]);
     }
-    //getchar();
 }
 
 
-/* void fc3d_nsgs_openmp_ddm_naive_domain_interface(unsigned int max_threads, unsigned int nominal_interface_size, unsigned int domain_size, unsigned int  nc, */
-/*                                                  unsigned int * interface, unsigned int * interface_size, */
-/*                                                  unsigned int * interface_out,   unsigned int * interface_out_size); */
-/* { */
-/* } */
+void fc3d_nsgs_openmp_ddm_naive_build_domain_interface(unsigned int  nc, unsigned int number_of_domains, Ddm_domain_interface * domain_interface)
+{
+
+  unsigned int nominal_domain_size = nc/(number_of_domains); // domain size
+  // estimation of interface size
+  unsigned int nominal_interface_size = nominal_domain_size/number_of_domains;// nominal_domain_size/4; // nominal_domain_size/(p) ;
+
+  if (number_of_domains==1)
+    nominal_interface_size = nominal_domain_size/(number_of_domains+1);
+
+  if (nominal_interface_size%2 == 1)
+  {
+    nominal_interface_size ++;
+  }
+  if (nominal_interface_size  == 0)
+  {
+    nominal_interface_size =2;
+  }
+
+  domain_interface->number_of_domains =  number_of_domains;
+
+  domain_interface->interface_size = number_of_domains*nominal_interface_size;
+  domain_interface->interface = (unsigned int*) calloc(domain_interface->interface_size,sizeof(unsigned int));
+  domain_interface->interface_out_size = nc-domain_interface->interface_size;
+
+  domain_interface->interface_out = (unsigned int*) calloc((domain_interface->interface_out_size),sizeof(unsigned int));
+
+  fc3d_nsgs_openmp_ddm_naive_build_interface(number_of_domains ,
+                                             nominal_interface_size, nominal_domain_size,  nc,
+                                             domain_interface->interface, &(domain_interface->interface_size),
+                                             domain_interface->interface_out, &(domain_interface->interface_out_size));
+
+  domain_interface->domains =     (unsigned int **)malloc(number_of_domains*sizeof(unsigned int *));
+  domain_interface->domains_out = (unsigned int **)malloc(number_of_domains*sizeof(unsigned int *));
+
+  domain_interface->domains_size     = (unsigned int *)malloc(number_of_domains*sizeof(unsigned int));
+  domain_interface->domains_out_size = (unsigned int *)malloc(number_of_domains*sizeof(unsigned int));
+
+  fc3d_nsgs_openmp_ddm_naive_build_domain(number_of_domains , nominal_interface_size, nominal_domain_size, nc,
+                                          domain_interface->domains, domain_interface->domains_size,
+                                          domain_interface->domains_out, domain_interface->domains_out_size);
+}

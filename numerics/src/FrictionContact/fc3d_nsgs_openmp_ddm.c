@@ -20,7 +20,7 @@
 #include "fc3d_nsgs_openmp_ddm_naive_domain_interface.h"
 #include "SiconosBlas.h"
 
-
+#include "intersection_union.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,14 +35,47 @@
 
 //#define USE_OPENMP_HERE 1
 
+void ddm_domain_interface_free(Ddm_domain_interface * domain_interface)
+{
+  for (unsigned int i =0 ; i < domain_interface->number_of_domains; i++)
+  {
+    free(domain_interface->domains[i]);
+    free(domain_interface->domains_out[i]);
+  }
+
+  free(domain_interface->domains_size);
+  free(domain_interface->domains_out_size);
+  free(domain_interface->interface);
+  free(domain_interface->interface_out);
+}
+void ddm_domain_interface_display(Ddm_domain_interface * domain_interface)
+{
+  printf("Ddm_domain_interface Display :\n-------------\n");
+  printf("number_of_domains = %i\n", domain_interface->number_of_domains);
+
+
+  for (unsigned int i =0 ; i < domain_interface->number_of_domains; i++)
+  {
+    printf("domains_size[%i] = %i\n",i,domain_interface->domains_size[i]);
+    printf("domains[%i] = ", i);
+    uint_array_print(domain_interface->domains[i],domain_interface->domains_size[i]);
+    printf("domains_out_size[%i] = %i\n",i,domain_interface->domains_out_size[i]);
+    printf("domains_out[%i] = ", i);
+    uint_array_print(domain_interface->domains_out[i],domain_interface->domains_out_size[i]);
+  }
+  printf("interface_size = %i\n", domain_interface->interface_size );
+  printf("interface =");
+  uint_array_print(domain_interface->interface, domain_interface->interface_size);
+
+  printf("interface_out_size = %i\n", domain_interface->interface_out_size);
+  printf("interface_out =");
+  uint_array_print( domain_interface->interface_out, domain_interface->interface_out_size );
+
+}
 
 void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
                           double *velocity, int* info, SolverOptions* options,
-                          unsigned int max_threads,
-                          unsigned int ** domains, unsigned int * domains_size,
-                          unsigned int ** domains_out,   unsigned int * domains_out_size,
-                          unsigned int * interface, unsigned int * interface_size,
-                          unsigned int * interface_out,   unsigned int * interface_out_size)
+                          Ddm_domain_interface * domain_interface)
 {
 
 
@@ -77,6 +110,19 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
   Update_indexPtr update_domain_problem = NULL;
   FreeSolverNSGSPtr freeSolver = NULL;
   ComputeErrorPtr computeError = NULL;
+
+  unsigned int max_threads = domain_interface->number_of_domains;
+
+  unsigned int ** domains = domain_interface->domains;
+  unsigned int * domains_size = domain_interface->domains_size;
+  unsigned int ** domains_out = domain_interface->domains_out;
+  unsigned int * domains_out_size = domain_interface->domains_out_size;
+  unsigned int * interface = domain_interface->interface;
+  unsigned int interface_size = domain_interface->interface_size;
+  unsigned int * interface_out = domain_interface->interface_out;
+  unsigned int interface_out_size = domain_interface->interface_out_size;
+
+
 
   /* Allocate space for local solver and local problem */
 #if defined(USE_OPENMP) && defined(_OPENMP)
@@ -265,11 +311,11 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
     /* ------------------------------------------------------- */
     {
       double error_delta_reaction_interface=0.0, error_interface=0.0;
-      for (unsigned int i = 0; i < *interface_size; i++ )
+      for (unsigned int i = 0; i < interface_size; i++ )
       {
         int  contact = interface[i];
         fc3d_nsgs_domain_computeqLocal(problem, reaction_k, contact,
-                                      interface_out, *interface_out_size,
+                                      interface_out, interface_out_size,
                                       &(q_k[3*contact]));
       }
       /* double normq_k = cblas_dnrm2(nc*3 , q_k , 1); */
@@ -285,7 +331,7 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
 #ifdef USE_OPENMP_HERE
          #pragma omp parallel for reduction(+:error_delta_reaction_interface)
 #endif
-        for ( unsigned int i = 0 ; i < *interface_size ; i++)
+        for ( unsigned int i = 0 ; i < interface_size ; i++)
         {
           unsigned int tid = omp_get_thread_num();
           int contact = interface[i];
@@ -295,7 +341,7 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
           (*update_domain_problem)(contact, interface_problem, interface_local_problems[tid],
                                    reaction_k,
                                    interface_local_solver_options[tid],
-                                   interface, *interface_size);
+                                   interface, interface_size);
 
           interface_local_solver_options[tid]->iparam[4] = contact;
 

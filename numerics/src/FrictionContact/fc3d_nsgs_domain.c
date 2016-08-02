@@ -57,8 +57,8 @@ void fc3d_nsgs_domain_computeqLocal(FrictionContactProblem * problem,
      * with rowMB the row of blocks of MGlobal which corresponds
      * to the current contact
      */
-    rowProdNoDiagSBM3x3_index_block(n, 3, contact, problem->M->matrix1, reaction, qLocal, index, index_size);
-    /* rowProdNoDiagSBM3x3(n, 3, contact, problem->M->matrix1, reaction, qLocal); */
+    SBM_row_prod_no_diag_3x3_index_block(n, 3, contact, problem->M->matrix1, reaction, qLocal, index, index_size);
+    /* SBM_row_prod_no_diag_3x3(n, 3, contact, problem->M->matrix1, reaction, qLocal); */
   }
 
   /* for(unsigned int i =0; i < 3; i++) printf("qLocal[%i]= %e\t", i, qLocal[i]); */

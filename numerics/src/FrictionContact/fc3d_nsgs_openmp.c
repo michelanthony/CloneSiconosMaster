@@ -19,7 +19,8 @@
 #include <stdlib.h>
 #include "fc3d_Solvers.h"
 #include "fc3d_nsgs_openmp.h"
-
+#include "fc3d_nsgs_openmp_ddm.h"
+#include "fc3d_nsgs_openmp_ddm_naive_domain_interface.h"
 
 
 void fc3d_nsgs_openmp(FrictionContactProblem* problem, double *reaction,
@@ -39,7 +40,28 @@ void fc3d_nsgs_openmp(FrictionContactProblem* problem, double *reaction,
   }
   else if (iparam[11] == 2)
   {
-    fc3d_nsgs_openmp_ddm_naive(problem, reaction, velocity, info, options) ;
+    unsigned int max_threads = 1;
+    /* Number of contacts */
+    unsigned int nc = problem->numberOfContacts;
+    if (options->iparam[10] > 0)
+    {
+      max_threads = options->iparam[10];
+      omp_set_num_threads(max_threads);
+    }
+    else
+      max_threads = omp_get_max_threads();
+
+    /* build contact domain sets and interface set in a naive way */
+    Ddm_domain_interface domain_interface;
+    fc3d_nsgs_openmp_ddm_naive_build_domain_interface(nc, max_threads, &domain_interface);
+
+    ddm_domain_interface_display(&domain_interface);
+
+    /* call for ddm solver */
+    fc3d_nsgs_openmp_ddm(problem, reaction, velocity, info, options,
+                         &domain_interface);
+
+    ddm_domain_interface_free(&domain_interface);
   }
   else if (iparam[11] == 3)
   {
