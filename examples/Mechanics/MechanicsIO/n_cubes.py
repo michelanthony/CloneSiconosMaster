@@ -35,7 +35,7 @@ with Hdf5() as io:
     #io.addPrimitiveShape('CubePrim', 'Box', (2, 2, 2))
 
     # Definition of the ground shape
-    io.addPrimitiveShape('Ground', 'Box', (200, 200, .5))
+    io.addPrimitiveShape('Ground', 'Box', (20, 20, .5))
 
     # Definition of the left shape
     # io.addPrimitiveShape('Left', 'Box', (100, 0.5, 50.))
@@ -61,7 +61,9 @@ with Hdf5() as io:
         for j in range(n_col):
             for n in range(n_cube):
                 io.addObject('cubeCS'+str(n)+'_'+str(i)+'_'+str(j), [Contactor('CubeCS'+str(n)+'_'+str(i)+'_'+str(j))],
-                             translation=[3.0*i, 3.0*j, 2.05*(n+1)],
+                             translation=[3.0*i - 0.5 - 3.0*n_row/2,
+                                          3.0*j - 0.5 - 3.0*n_col/2,
+                                          2.05*(n+1)],
                              velocity=[10*(1.0+2.0*(random.random()-1.0)/2.0), 10*(1.0+2.0*(random.random()-1.0)/2.0), 0, 1, 1, 1],
                              mass=1)
 
@@ -73,7 +75,7 @@ with Hdf5() as io:
     # not given, it is a static object only involved in contact
     # detection.
     io.addObject('ground', [Contactor('Ground')],
-                 translation=[50, 50, 0])
+                 translation=[0, 0, 0])
     # io.addObject('left', [Contactor('Left')],
     #              translation=[0, 50., 25.])
     # io.addObject('right', [Contactor('Right')],
@@ -88,8 +90,8 @@ with Hdf5() as io:
 # with the vview command.
 
 
-nstep=20000
-step=0.0005
+nstep=2000
+step=0.005
 with Hdf5(mode='r+') as io:
 
     # By default earth gravity is applied and the units are those
@@ -115,4 +117,4 @@ with Hdf5(mode='r+') as io:
            itermax=100,
            tolerance=1e-4,
            numerics_verbose=False,
-           output_frequency=100)
+           output_frequency=1)

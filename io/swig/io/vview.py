@@ -370,6 +370,9 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
             self.cn_at_time = dict()
             self.cn = dict()
 
+            self.dom_at_time = dict()
+            self.dom = dict()
+
             self._contact_field = dict()
             self._output = dict()
 
@@ -399,6 +402,8 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
                             id_f[imu], 8:11].copy()
                         self.cf_at_time[mu] = self._data[
                             id_f[imu], 11:14].copy()
+                        self.dom_at_time[mu] = self._data[
+                            id_f[imu], 15:16].copy()
 
                         self.cpa[mu] = numpy_support.numpy_to_vtk(
                             self.cpa_at_time[mu])
@@ -416,10 +421,15 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
                             self.cf_at_time[mu])
                         self.cf[mu].SetName('contactForces')
 
+                        self.dom[mu] = numpy_support.numpy_to_vtk(
+                            self.dom_at_time[mu])
+                        self.dom[mu].SetName('domains')
+
                         self._contact_field[mu].AddArray(self.cpa[mu])
                         self._contact_field[mu].AddArray(self.cpb[mu])
                         self._contact_field[mu].AddArray(self.cn[mu])
                         self._contact_field[mu].AddArray(self.cf[mu])
+                        self._contact_field[mu].AddArray(self.dom[mu])
                     except:
                         pass
 
@@ -488,6 +498,7 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
     cone = dict()
     cone_glyph = dict()
     cmapper = dict()
+    cLUT = dict()
     cactor = dict()
     arrow = dict()
     cylinder = dict()
@@ -544,12 +555,33 @@ with Hdf5(io_filename=io_filename, mode='r') as io:
         cone_glyph[mu].SetInputArrayToProcess(1, 0, 0, 0, 'contactNormals')
         cone_glyph[mu].OrientOn()
 
+        cone_glyph[mu].SetInputArrayToProcess(3, 0, 0, 0, 'domains')
+        cone_glyph[mu].SetColorModeToColorByScalar()
+
         cmapper[mu] = vtk.vtkPolyDataMapper()
         cmapper[mu].SetInputConnection(cone_glyph[mu].GetOutputPort())
 
+        cLUT[mu] = vtk.vtkLookupTable()
+        # cLUT[mu].SetNumberOfColors(2)
+        # cLUT[mu].Build()
+        # cLUT[mu].SetTableValue(0, *random_color())
+        # cLUT[mu].SetTableValue(1, *random_color())
+        # cLUT[mu].SetTableRange(0, 1)
+        cLUT[mu].SetRange(0,1)
+        cLUT[mu].SetHueRange(0.667,0)
+        cLUT[mu].SetSaturationRange(1,1)
+        cLUT[mu].SetValueRange(0.2,1)
+        cLUT[mu].Build()
+        cmapper[mu].SetLookupTable(cLUT[mu])
+        cmapper[mu].SetColorModeToMapScalars()
+        cmapper[mu].ScalarVisibilityOn()
+        cmapper[mu].SelectColorArray('domains')
+        cmapper[mu].SetScalarRange(0, 1)
+        cmapper[mu].SetScalarModeToUsePointData()
+
         cactor[mu] = vtk.vtkActor()
         cactor[mu].GetProperty().SetOpacity(0.4)
-        cactor[mu].GetProperty().SetColor(0, 0, 1)
+        #cactor[mu].GetProperty().SetColor(0, 0, 1)
         cactor[mu].SetMapper(cmapper[mu])
 
         arrow[mu] = vtk.vtkArrowSource()
