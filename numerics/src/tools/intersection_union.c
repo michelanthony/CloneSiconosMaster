@@ -42,7 +42,7 @@ void uint_array_of_array_print(unsigned int ** idx, unsigned int idx_size, unsig
 /* Function prints Intersection of arr1[] and arr2[]
    m is the number of elements in arr1[]
    n is the number of elements in arr2[] */
-void printIntersection(int arr1[], int arr2[], int m, int n)
+void sorted_array_intersection_print(int arr1[], int arr2[], int m, int n)
 {
   int i = 0, j = 0;
   while (i < m && j < n)
@@ -59,7 +59,7 @@ void printIntersection(int arr1[], int arr2[], int m, int n)
   }
 }
 
-void array_of_array_intersection_with_array(int * arr1, int ** arr2, int m, int n, int array_size, int pos,  int ** intersection_set, int * intersection_set_size )
+void sorted_array_of_array_intersection_with_array(int * arr1, int ** arr2, int m, int n, int array_size, int pos,  int ** intersection_set, int * intersection_set_size )
 {
   int i = 0, j = 0;
   int size= 0;
@@ -81,7 +81,7 @@ void array_of_array_intersection_with_array(int * arr1, int ** arr2, int m, int 
   *intersection_set_size = size;
 }
 
-void array_intersection(int * arr1, int * arr2, int m, int n, int * intersection_set, int * intersection_set_size )
+void sorted_array_intersection(int * arr1, int * arr2, int m, int n, int * intersection_set, int * intersection_set_size )
 {
   
   int i = 0, j = 0;
@@ -177,7 +177,7 @@ void array_union(int arr1[], int arr2[], int m, int n, int * union_set, int * un
 
 
 
-void uint_array_of_array_intersection_with_array(unsigned int * arr1, unsigned int ** arr2, unsigned int m, unsigned int n,
+void uint_sorted_array_of_array_intersection_with_array(unsigned int * arr1, unsigned int ** arr2, unsigned int m, unsigned int n,
                                                  unsigned int array_size, unsigned int pos,  unsigned int ** intersection_set, unsigned int * intersection_set_size )
 {
   unsigned int i = 0, j = 0;
@@ -201,7 +201,7 @@ void uint_array_of_array_intersection_with_array(unsigned int * arr1, unsigned i
 }
 
 
-void uint_array_intersection(unsigned int * arr1, unsigned int * arr2, unsigned int m, unsigned int n,
+void uint_sorted_array_intersection(unsigned int * arr1, unsigned int * arr2, unsigned int m, unsigned int n,
                              unsigned int * intersection_set, unsigned int * intersection_set_size )
 {
 
@@ -260,7 +260,7 @@ void uint_array_intersection(unsigned int * arr1, unsigned int * arr2, unsigned 
 /*   int arr2[] = {2, 3, 5, 7}; */
 /*   int m = sizeof(arr1)/sizeof(arr1[0]); */
 /*   int n = sizeof(arr2)/sizeof(arr2[0]); */
-/*   printIntersection(arr1, arr2, m, n); */
+/*   sorted_array_intersection_print(arr1, arr2, m, n); */
 /*   int max_size=0; */
 /*   if (m<n) */
 /*   { */

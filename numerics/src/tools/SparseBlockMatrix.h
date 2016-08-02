@@ -234,6 +234,10 @@ extern "C"
   */
   void SBM_row_prod(unsigned int sizeX, unsigned int sizeY, unsigned int currentRowNumber, const SparseBlockStructuredMatrix* const A, const double* const x, double* y, int init);
 
+  void SBM_row_prod_3x3_index_block(unsigned int sizeX, unsigned int sizeY, unsigned int currentRowNumber,
+                                    const SparseBlockStructuredMatrix* const A, double* const x, double* y,
+                                    unsigned int * index_block, int index_block_size);
+
   /** Row of a SparseMatrix - vector product y = rowA*x or y += rowA*x, rowA being a row of blocks of A
       \param[in] sizeX dim of the vector x
       \param[in] sizeY dim of the vector y

@@ -21,16 +21,17 @@
 /* Function prints Intersection of arr1[] and arr2[]
    m is the number of elements in arr1[]
    n is the number of elements in arr2[] */
-void printIntersection(int arr1[], int arr2[], int m, int n);
+void sorted_array_intersection_print(int arr1[], int arr2[], int m, int n);
 
+void sorted_array_intersection(int * arr1, int * arr2, int m, int n, int * intersection_set, int * intersection_set_size );
 
-void array_intersection(int * arr1, int * arr2, int m, int n, int * intersection_set, int * intersection_set_size );
-void array_of_array_intersection_with_array(int * arr1, int ** arr2, int m, int n, int array_size, int pos,  int ** intersection_set, int * intersection_set_size );
+void sorted_array_of_array_intersection_with_array(int * arr1, int ** arr2, int m, int n, int array_size, int pos,  int ** intersection_set, int * intersection_set_size );
 
 /* Function prints union of arr1[] and arr2[]
    m is the number of elements in arr1[]
    n is the number of elements in arr2[] */
 void printUnion(int arr1[], int arr2[], int m, int n);
+
 void array_union(int arr1[], int arr2[], int m, int n, int * union_set, int * union_set_size);
 
 void int_array_print(int * idx, int idx_size);
@@ -41,9 +42,9 @@ void uint_array_print(unsigned int * idx, unsigned int idx_size);
 
 void uint_array_of_array_print(unsigned int ** idx, unsigned  int idx_size, unsigned int array_size);
 
-void uint_array_intersection(unsigned int * arr1, unsigned int * arr2, unsigned int m, unsigned int n,
+void uint_sorted_array_intersection(unsigned int * arr1, unsigned int * arr2, unsigned int m, unsigned int n,
                              unsigned int * intersection_set, unsigned int * intersection_set_size );
-void uint_array_of_array_intersection_with_array(unsigned int * arr1, unsigned int ** arr2, unsigned int m,
+void uint_sorted_array_of_array_intersection_with_array(unsigned int * arr1, unsigned int ** arr2, unsigned int m,
                                                  unsigned int n, unsigned int array_size, unsigned int pos,
                                                  unsigned int ** intersection_set, unsigned int * intersection_set_size );
 
