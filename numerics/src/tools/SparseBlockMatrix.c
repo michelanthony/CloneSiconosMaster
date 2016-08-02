@@ -888,8 +888,15 @@ void SBM_row_prod_3x3_index_block(unsigned int sizeX, unsigned int sizeY, unsign
   for (int k =0; k < index_in_row_size; k++ )
     intersection_index[k] = (unsigned int*) malloc(2* sizeof(unsigned int));
   unsigned int intersection_index_size=0;
+  if (uint_array_of_array_check_sorted(index_in_row, index_in_row_size, 0))
+  {
+    printf("SBM_row_prod_3x3_index_block needs sorted array ");
+    exit(1);
+  }  
+
+  
   uint_sorted_array_of_array_intersection_with_array(index_block, index_in_row, index_block_size, index_in_row_size, 2, 0,
-                                              intersection_index, &intersection_index_size  );
+                                                     intersection_index, &intersection_index_size  );
   /* printf("intersection= "); */
   /* uint_array_of_array_print(intersection_index, intersection_index_size, 2); */
 
@@ -990,19 +997,23 @@ void SBM_row_prod_no_diag_3x3_index_block(unsigned int sizeX, unsigned int sizeY
     i_k++;
   }
 
-  
-  /* printf("index_column_in_row= "); */
-  /* printidx(index_column_in_row, i_k); */
-  /* printf("index_in_row = ");    */
-  /* array_of_array_print(index_in_row,index_in_row_size, 2); */
+  /* printf("index_in_row_size = %i\n ", index_in_row_size); */
+  /* printf("index_in_row = "); */
+  /* uint_array_of_array_print(index_in_row,index_in_row_size, 2); */
   /* printf("index_block= "); */
-  /* array_print(index_block, index_block_size); */
-
+  /* uint_array_print(index_block, index_block_size); */
+  
 
   unsigned int ** intersection_index = (unsigned int **)malloc(index_in_row_size * sizeof(unsigned int *)); // could be improved.
   for (int k =0; k < index_in_row_size; k++ )
     intersection_index[k] = (unsigned int*) malloc(2* sizeof(unsigned int));
   unsigned int intersection_index_size=0;
+  if (uint_array_of_array_check_sorted(index_in_row, index_in_row_size, 0))
+  {
+    printf("SBM_row_prod_3x3_index_block needs sorted array ");
+    exit(1);
+  }  
+
   uint_sorted_array_of_array_intersection_with_array(index_block, index_in_row, index_block_size, index_in_row_size, 2, 0,
                                               intersection_index, &intersection_index_size  );
   /* printf("intersection= ");  */

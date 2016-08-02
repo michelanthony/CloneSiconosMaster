@@ -8,6 +8,7 @@ void int_array_print(int * idx, int idx_size)
   for (int i = 0; i <  idx_size; i++  ) printf("%i ", idx[i]);
   printf("]\n");
 }
+
 void int_array_of_array_print(int ** idx, int idx_size, int array_size)
 {
   printf("[");
@@ -37,8 +38,40 @@ void uint_array_of_array_print(unsigned int ** idx, unsigned int idx_size, unsig
   }
   printf("]\n");
 }
+int int_array_check_sorted(int * idx, int idx_size)
+{
+  for (int i = 1; i <  idx_size; i++  )
+    if (idx[i] < idx[i-1])
+      return 1;
+  return 0;
+}
 
+int int_array_of_array_check_sorted(int ** idx, int idx_size, int pos)
+{
+  for (int i = 1; i <  idx_size; i++  )
+  {
+    if (idx[i][pos] < idx[i-1][pos])
+      return 1;
+  }
+  return 0;
+}
+int uint_array_check_sorted(unsigned int * idx, unsigned int idx_size)
+{
+  for (unsigned int i = 1; i <  idx_size; i++  )
+    if (idx[i] < idx[i-1])
+      return 1;
+  return 0;
+}
 
+int uint_array_of_array_check_sorted(unsigned int ** idx, unsigned int idx_size, unsigned int pos)
+{
+  for (unsigned int i = 1; i <  idx_size; i++  )
+  {
+    if (idx[i][pos] < idx[i-1][pos])
+      return 1;
+  }
+  return 0;
+}
 /* Function prints Intersection of arr1[] and arr2[]
    m is the number of elements in arr1[]
    n is the number of elements in arr2[] */

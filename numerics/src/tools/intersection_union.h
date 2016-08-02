@@ -48,4 +48,8 @@ void uint_sorted_array_of_array_intersection_with_array(unsigned int * arr1, uns
                                                  unsigned int n, unsigned int array_size, unsigned int pos,
                                                  unsigned int ** intersection_set, unsigned int * intersection_set_size );
 
+int int_array_check_sorted(int * idx, int idx_size);
+int int_array_of_array_check_sorted(int ** idx, int idx_size, int pos);
 
+int uint_array_check_sorted(unsigned int * idx, unsigned int idx_size);
+int uint_array_of_array_check_sorted(unsigned int ** idx, unsigned int idx_size, unsigned int pos);
