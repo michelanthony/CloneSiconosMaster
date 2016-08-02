@@ -892,7 +892,7 @@ void rowProdNoDiagSBM3x3_index_block(unsigned int sizeX, unsigned int sizeY, uns
   uint_array_of_array_intersection_with_array(index_block, index_in_row, index_block_size, index_in_row_size, 2, 0,
                                               intersection_index, &intersection_index_size  );
   /* printf("intersection= "); */
-  /* array_of_array_print(intersection_index, intersection_index_size, 2); */
+  /* uint_array_of_array_print(intersection_index, intersection_index_size, 2); */
 
   /* for (size_t blockNum = A->index1_data[currentRowNumber]; */
   /*      blockNum < A->index1_data[currentRowNumber + 1]; */
