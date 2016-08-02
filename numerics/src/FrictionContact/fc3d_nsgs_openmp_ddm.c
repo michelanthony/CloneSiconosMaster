@@ -72,6 +72,26 @@ void ddm_domain_interface_display(Ddm_domain_interface * domain_interface)
   uint_array_print( domain_interface->interface_out, domain_interface->interface_out_size );
 
 }
+int ddm_domain_interface_check_sorted(Ddm_domain_interface * domain_interface)
+{
+  for (unsigned int i =0 ; i < domain_interface->number_of_domains; i++)
+  {
+    for (unsigned int j =1 ; j < domain_interface->domains_size[i]; j++)
+    {
+      if (domain_interface->domains[i][j] < domain_interface->domains[i][j-1] )
+      {
+        printf("domain_interface->domains[%i][%i] =  %i domain_interface->domains[%i][% i] = %i\n", i, j,domain_interface->domains[i][j] , i, j-1, domain_interface->domains[i][j-1] );
+        return 1;
+      }
+    }
+  }
+  for (unsigned int j =1 ; j < domain_interface->interface_size; j++)
+    {
+      if (domain_interface->interface[j] < domain_interface->interface[j-1] )
+        return 1;
+    }
+  return 0;
+}
 
 void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
                           double *velocity, int* info, SolverOptions* options,

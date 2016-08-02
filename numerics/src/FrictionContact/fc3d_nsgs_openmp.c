@@ -56,7 +56,9 @@ void fc3d_nsgs_openmp(FrictionContactProblem* problem, double *reaction,
     fc3d_nsgs_openmp_ddm_naive_build_domain_interface(nc, max_threads, &domain_interface);
 
     ddm_domain_interface_display(&domain_interface);
-
+    if (ddm_domain_interface_check_sorted(&domain_interface))
+      numericsError("fc3d_nsgs_openmp_ddm", "The method needs sorted index for domain and interface definition");
+      
     /* call for ddm solver */
     fc3d_nsgs_openmp_ddm(problem, reaction, velocity, info, options,
                          &domain_interface);

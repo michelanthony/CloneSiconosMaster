@@ -44,6 +44,7 @@ typedef struct
 
 void ddm_domain_interface_free(Ddm_domain_interface * domain_interface);
 void ddm_domain_interface_display(Ddm_domain_interface * domain_interface);
+int ddm_domain_interface_check_sorted(Ddm_domain_interface * domain_interface);
 void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
                           double *velocity, int* info, SolverOptions* options,
                           Ddm_domain_interface * domain_interface);
