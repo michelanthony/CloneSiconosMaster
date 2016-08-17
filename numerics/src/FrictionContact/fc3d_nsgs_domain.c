@@ -209,8 +209,8 @@ void fc3d_nsgs_domain(FrictionContactProblem* problem,
 
   unsigned int *scontacts = NULL;
   /*  dparam[0]= dparam[2]; // set the tolerance for the local solver */
-  if (iparam[1] == SICONOS_FRICTION_3D_NSGS_LIGHT_ERROR_EVALUATION_WITH_FULL_FINAL ||
-      iparam[1] == SICONOS_FRICTION_3D_NSGS_LIGHT_ERROR_EVALUATION)
+  if (iparam[1] == SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT_WITH_FULL_FINAL ||
+      iparam[1] == SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT)
   {
     double reactionold[3];
     while ((iter < itermax) && (hasNotConverged > 0))
@@ -265,7 +265,7 @@ void fc3d_nsgs_domain(FrictionContactProblem* problem,
       }
       *info = hasNotConverged;
     }
-    if (iparam[1] == SICONOS_FRICTION_3D_NSGS_LIGHT_ERROR_EVALUATION_WITH_FULL_FINAL) /* Full criterium */
+    if (iparam[1] == SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT_WITH_FULL_FINAL) /* Full criterium */
     {
       double absolute_error;
       (*computeError)(problem, reaction , velocity, tolerance, options, normq, &absolute_error);

@@ -220,9 +220,9 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
 
     domain_solver_options[i]->iparam[0]=domain_itermax;
     domain_solver_options[i]->iparam[1]=
-      SICONOS_FRICTION_3D_NSGS_LIGHT_ERROR_EVALUATION_WITH_FULL_FINAL; // light with full final  error
+      SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT_WITH_FULL_FINAL; // light with full final  error
     domain_solver_options[i]->iparam[1]=
-      SICONOS_FRICTION_3D_NSGS_LIGHT_ERROR_EVALUATION; // light error
+      SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT; // light error
 
     /* fc3d_nsgs_index_initialize_local_solver(&local_solver, &update_domain_problem, */
     /*                                   (FreeSolverNSGSPtr *)&freeSolver, &computeError, */
