@@ -132,12 +132,17 @@ class Timer():
 
     def __init__(self):
         self._t0 = time.clock()
+        self._t0t = time.time()
 
-    def elapsed(self):
+    def elapsed_clock(self):
         return time.clock() - self._t0
+
+    def elapsed_time(self):
+        return time.time() - self._t0t
 
     def update(self):
         self._t0 = time.clock()
+        self._t0t = time.time()
 
 
 def warn(msg):
@@ -150,9 +155,11 @@ def log(fun, with_timer=False):
 
         def logged(*args):
             t.update()
-            print('{0} ...'.format(fun.__name__), end='')
+            print('{0} ...'.format(fun.__name__))
             fun(*args)
-            print('..... {0} s'.format(t.elapsed()))
+            print('{0} done, '.format(fun.__name__), end='')
+            print('clock {0} s, time {1} s'
+                  .format(t.elapsed_clock(), t.elapsed_time()))
         return logged
     else:
         def silent(*args):
