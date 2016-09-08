@@ -1120,7 +1120,7 @@ class Hdf5():
 
             domain_data[current_line:, :] = np.concatenate((times, domains), axis=1)
 
-    def outputSolverInfos(self):
+    def getSolverInfos(self):
         """
         Outputs solver #iterations & precision reached
         """
@@ -1129,8 +1129,6 @@ class Hdf5():
         so = self._broadphase.model().simulation().oneStepNSProblem(0).\
             numericsSolverOptions()
 
-        current_line = self._solv_data.shape[0]
-        self._solv_data.resize(current_line + 1, 0)
         if so.solverId == Numerics.SICONOS_GENERIC_MECHANICAL_NSGS:
             iterations = so.iparam[3]
             precision = so.dparam[2]
@@ -1139,58 +1137,30 @@ class Hdf5():
             iterations = so.iparam[7]
             precision = so.dparam[1]
             local_precision = 0.
+        elif (numerics_has_openmp_solvers
+              and so.solverId == Numerics.SICONOS_FRICTION_3D_NSGS_OPENMP):
+            iterations = so.iparam[7]
+            precision = so.dparam[1]
+            local_precision = 0.
+
         # maybe wrong for others
         else:
-            iterations = so.iparam[1]
+            iterations = so.iparam[7]
             precision = so.dparam[1]
             local_precision = so.dparam[2]
 
-        if numerics_has_openmp_solvers :
-            if so.solverId == Numerics.SICONOS_FRICTION_3D_NSGS_OPENMP:
-                iterations = so.iparam[7]
-                precision = so.dparam[2]
-                local_precision = so.dparam[3]
-            # maybe wrong for others
-            else:
-                iterations = so.iparam[1]
-                precision = so.dparam[1]
-                local_precision = so.dparam[2]
+        return (time, iterations, precision, local_precision)
 
-        self._solv_data[current_line, :] = [time, iterations, precision,
-                                            local_precision]
+    def outputSolverInfos(self):
+        current_line = self._solv_data.shape[0]
+        self._solv_data.resize(current_line + 1, 0)
+        self._solv_data[current_line, :] = self.getSolverInfos()
 
     def printSolverInfos(self):
         """
         Outputs solver #iterations & precision reached
         """
-        tm = self.currentTime()
-        so = self._broadphase.model().simulation().oneStepNSProblem(0).\
-            numericsSolverOptions()
-        if so.solverId == Numerics.SICONOS_GENERIC_MECHANICAL_NSGS:
-            iterations = so.iparam[3]
-            precision = so.dparam[2]
-            local_precision = so.dparam[3]
-        elif so.solverId == Numerics.SICONOS_FRICTION_3D_NSGS:
-            iterations = so.iparam[7]
-            precision = so.dparam[1]
-            local_precision = 0.
-        # maybe wrong for others
-        else:
-            iterations = so.iparam[1]
-            precision = so.dparam[1]
-            local_precision = so.dparam[2]
-
-        if numerics_has_openmp_solvers :
-            if so.solverId == Numerics.SICONOS_FRICTION_3D_NSGS_OPENMP:
-                iterations = so.iparam[7]
-                precision = so.dparam[2]
-                local_precision = so.dparam[3]
-            # maybe wrong for others
-            else:
-                iterations = so.iparam[1]
-                precision = so.dparam[1]
-                local_precision = so.dparam[2]
-
+        tm, iterations, precision, _ = self.getSolverInfos()
         print('SolverInfos at time :', tm,
               'iterations= ', iterations,
               'precision=', precision,
