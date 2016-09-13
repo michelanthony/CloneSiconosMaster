@@ -29,6 +29,15 @@ void fc3d_nsgs_openmp(FrictionContactProblem* problem, double *reaction,
   /* int and double parameters */
   int* iparam = options->iparam;
 
+  unsigned int max_threads = 1;
+
+  #if defined(USE_OPENMP) && defined(_OPENMP)
+  if (options->iparam[10] > 0)
+  {
+    omp_set_num_threads(options->iparam[10]);
+  }
+  max_threads = omp_get_max_threads();
+  #endif
 
   if (iparam[11] == 0)
   {
@@ -40,16 +49,8 @@ void fc3d_nsgs_openmp(FrictionContactProblem* problem, double *reaction,
   }
   else if (iparam[11] == 2)
   {
-    unsigned int max_threads = 1;
     /* Number of contacts */
     unsigned int nc = problem->numberOfContacts;
-    if (options->iparam[10] > 0)
-    {
-      max_threads = options->iparam[10];
-      omp_set_num_threads(max_threads);
-    }
-    else
-      max_threads = omp_get_max_threads();
 
     /* build contact domain sets and interface set in a naive way */
     Ddm_domain_interface domain_interface;

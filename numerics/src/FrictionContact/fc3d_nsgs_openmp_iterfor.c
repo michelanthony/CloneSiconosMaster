@@ -73,20 +73,12 @@ void fc3d_nsgs_openmp_iterfor(FrictionContactProblem* problem, double *reaction,
 
   /* Allocate space for local solver and local problem */
   unsigned int max_threads = 1;
-#if defined(USE_OPENMP) && defined(_OPENMP)
-  if (iparam[10] > 0)
-  {
-    max_threads = iparam[10];
-    omp_set_num_threads(max_threads);
-  }
-  else
-    max_threads = omp_get_max_threads();
+  #if defined(USE_OPENMP) && defined(_OPENMP)
+  max_threads = omp_get_max_threads();
+  #endif
+
   FrictionContactProblem **localproblems = alloca(max_threads*sizeof(void*));
   SolverOptions **localsolvoptions = alloca(max_threads*sizeof(void*));
-#else
-  FrictionContactProblem *localproblems[1];
-  SolverOptions *localsolvoptions[1];
-#endif
 
   if (verbose > 0) printf("----------------------------------- number of threads %i\n", omp_get_max_threads()  );
   if (verbose > 0) printf("----------------------------------- number of contacts %i\n", nc );

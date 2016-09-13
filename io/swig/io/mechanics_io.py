@@ -1477,7 +1477,8 @@ class Hdf5():
             violation_verbose=False,
             output_frequency=None,
             friction_contact_trace=False,
-            friction_contact_trace_params=None):
+            friction_contact_trace_params=None,
+            n_thread=None):
         """
         Run a simulation from inputs in hdf5 file.
         parameters are:
@@ -1591,9 +1592,17 @@ class Hdf5():
         osnspb.numericsSolverOptions().iparam[14] = Numerics.SICONOS_FRICTION_3D_NSGS_FILTER_LOCAL_SOLUTION_TRUE
 
         if numerics_has_openmp_solvers :
-            if  osnspb.numericsSolverOptions().solverId == Numerics.SICONOS_FRICTION_3D_NSGS_OPENMP:
-                n_thread = 6
-                osnspb.numericsSolverOptions().iparam[10] = n_thread
+            if (osnspb.numericsSolverOptions().solverId
+                == Numerics.SICONOS_FRICTION_3D_NSGS_OPENMP):
+
+                # If n_thread is None or 0, then number of threads is
+                # controlled by OMP_NUM_THREADS
+                osnspb.numericsSolverOptions().iparam[10] = [n_thread,0][n_thread==None]
+
+                # Parallelisation method
+                osnspb.numericsSolverOptions().iparam[11] = 0 # for
+                #osnspb.numericsSolverOptions().iparam[11] = 1 # redblack
+                #osnspb.numericsSolverOptions().iparam[11] = 2 # ddm
 
         osnspb.numericsSolverOptions().internalSolvers.solverId = Numerics.SICONOS_FRICTION_3D_ONECONTACT_NSN_AC_GP_P
         osnspb.numericsSolverOptions().internalSolvers.iparam[0] = 100
