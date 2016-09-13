@@ -127,6 +127,16 @@ void fc3d_nsgs_domain_initialize_local_solver(SolverPtr* solve, Update_indexPtr*
     break;
   }
 
+  case SICONOS_FRICTION_3D_ONECONTACT_NSN_AC_GP_P:
+  {
+    *solve = &fc3d_onecontact_nonsmooth_Newton_solvers_solve;
+    *update = &fc3d_nsgs_domain_update;
+    *freeSolver = (FreeSolverNSGSPtr)&fc3d_onecontact_nonsmooth_Newton_solvers_free;
+    *computeError = (ComputeErrorPtr)&fc3d_compute_error;
+    fc3d_onecontact_nonsmooth_Newton_solvers_initialize(problem, localproblem, localsolver_options);
+    break;
+  }
+
   default:
   {
     fprintf(stderr, "Numerics, fc3d_nsgs failed. Unknown internal solver : %s.\n", solver_options_id_to_name(localsolver_options->solverId));
