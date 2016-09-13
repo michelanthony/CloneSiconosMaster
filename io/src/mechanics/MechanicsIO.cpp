@@ -168,7 +168,7 @@ void contactPointProcess(SiconosVector& answer,
                          const T& rel)
 {
 
-  answer.resize(15);
+  answer.resize(14);
   const SiconosVector& posa = *rel.pc1();
   const SiconosVector& posb = *rel.pc2();
   const SiconosVector& nc = *rel.nc();
@@ -199,7 +199,7 @@ void contactPointProcess(SiconosVector& answer,
   answer.setValue(13, id);
 
   // coloring by domain, just x>0 for now
-  answer.setValue(14, posa(0) > 0);
+  //answer.setValue(14, posa(0) > 0);
 };
 
 template<>
@@ -313,7 +313,7 @@ SP::SimpleMatrix MechanicsIO::contactPoints(const Model& model) const
     InteractionsGraph& graph =
       *model.nonSmoothDynamicalSystem()->topology()->indexSet(1);
     unsigned int current_row;
-    result->resize(graph.vertices_number(), 15);
+    result->resize(graph.vertices_number(), 14);
     for(current_row=0, std11::tie(vi,viend) = graph.vertices();
         vi!=viend; ++vi, ++current_row)
     {
@@ -330,7 +330,7 @@ SP::SimpleMatrix MechanicsIO::contactPoints(const Model& model) const
       inspector.inter = graph.bundle(*vi);
       graph.bundle(*vi)->relation()->accept(inspector);
       const SiconosVector& data = inspector.answer;
-      if (data.size() == 15) result->setRow(current_row, data);
+      if (data.size() == 14) result->setRow(current_row, data);
     }
   }
   return result;

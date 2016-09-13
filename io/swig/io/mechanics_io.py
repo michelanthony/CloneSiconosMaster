@@ -549,7 +549,7 @@ class Hdf5():
                                      use_compression = self._use_compression)
         self._dynamic_data = data(self._data, 'dynamic', 9,
                                   use_compression = self._use_compression)
-        self._cf_data = data(self._data, 'cf', 16,
+        self._cf_data = data(self._data, 'cf', 15,
                              use_compression = self._use_compression)
         self._solv_data = data(self._data, 'solv', 4,
                                use_compression = self._use_compression)
