@@ -375,7 +375,8 @@ void solver_options_copy(SolverOptions* options_ori, SolverOptions* options)
 
   options->iSize = options_ori->iSize;
   options->dSize = options_ori->dSize;
-  
+  options->iWork = NULL;
+  options->dWork = NULL;
 
   options->iparam = (int *)calloc(options->iSize, sizeof(int));
 
@@ -396,7 +397,8 @@ void solver_options_copy(SolverOptions* options_ori, SolverOptions* options)
   {
     assert(options->iWorkSize > 0);
     options->iWorkSize = options_ori->iWorkSize;
-    options->iWork = (int *)calloc(options->iWorkSize, sizeof(int));
+    options->iWork = (int *)realloc(options->iWork,
+				    options->iWorkSize*sizeof(int));
     for (int i = 0  ; i < options->iWorkSize; i++ )
     {
       options->iWork[i] =  options_ori->iWork[i];
@@ -407,7 +409,8 @@ void solver_options_copy(SolverOptions* options_ori, SolverOptions* options)
   {
     assert(options->dWorkSize > 0);
     options->dWorkSize = options_ori->dWorkSize;
-    options->dWork = (double *)calloc(options->dWorkSize, sizeof(double));
+    options->dWork = (double *)realloc(options->dWork,
+				       options->dWorkSize*sizeof(double));
     for (int i = 0  ; i < options->dWorkSize; i++ )
     {
       options->dWork[i] =  options_ori->dWork[i];
