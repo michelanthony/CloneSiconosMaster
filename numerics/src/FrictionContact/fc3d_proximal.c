@@ -146,8 +146,7 @@ void fc3d_proximal(FrictionContactProblem* problem, double *reaction, double *ve
     {
       internalsolver = &fc3d_ExtraGradient;
     }
-    else if (internalsolver_options->solverId == SICONOS_FRICTION_3D_LOCALAC ||
-             internalsolver_options->solverId == SICONOS_FRICTION_3D_NSN_AC)
+    else if (internalsolver_options->solverId == SICONOS_FRICTION_3D_NSN_AC)
     {
       internalsolver = &fc3d_nonsmooth_Newton_AlartCurnier;
       iter_iparam =1;
@@ -350,7 +349,6 @@ void fc3d_proximal(FrictionContactProblem* problem, double *reaction, double *ve
 
 int fc3d_proximal_setDefaultSolverOptions(SolverOptions* options)
 {
-  int i;
   if (verbose > 0)
   {
     printf("Set the Default SolverOptions for the PROX Solver\n");

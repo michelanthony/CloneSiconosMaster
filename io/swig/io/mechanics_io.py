@@ -17,11 +17,6 @@ import tempfile
 from contextlib import contextmanager
 from operator import itemgetter
 
-try:
-    import vtk
-except:
-    pass
-
 from siconos.mechanics.contact_detection.tools import Contactor
 
 from siconos.mechanics import joints
@@ -215,6 +210,8 @@ def loadMesh(shape_filename, collision_margin, scale=None):
     WARNING triangles cells assumed!
     """
 
+    import vtk
+    
     reader = vtk.vtkXMLPolyDataReader()
     reader.SetFileName(shape_filename)
     reader.Update()
@@ -1179,6 +1176,9 @@ class Hdf5():
         Add a mesh shape from a string.
         Accepted format : mesh encoded in VTK .vtp format
         """
+
+        import vtk
+        
         if name not in self._ref:
 
             shape = self._ref.create_dataset(name, (1,),
@@ -1196,6 +1196,9 @@ class Hdf5():
         Add a mesh shape from a file.
         Accepted format : .stl or mesh encoded in VTK .vtp format
         """
+
+        import vtk
+        
         if filename[0] != os.path.sep:
             filename = os.path.join(os.path.split(os.path.abspath(sys.argv[0]))[0],
                                     filename)
