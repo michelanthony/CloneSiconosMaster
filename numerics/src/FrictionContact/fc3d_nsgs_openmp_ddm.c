@@ -102,7 +102,7 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
 #if defined(USE_OPENMP) && defined(_OPENMP)
 
 #else
-  printf("fc3d_nsgs_openmp_ddm_stupid cannot be used without openmp");
+  printf("fc3d_nsgs_openmp_ddm cannot be used without openmp");
   exit(1);
 #endif
 
@@ -120,7 +120,7 @@ void fc3d_nsgs_openmp_ddm(FrictionContactProblem* problem, double *reaction,
 
   if (options->numberOfInternalSolvers < 1)
   {
-    numericsError("fc3d_nsgs_redblack_openmp", "The NSGS method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >= 1");
+    numericsError("fc3d_nsgs_openmp_ddm", "The NSGS method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >= 1");
   }
   assert(options->internalSolvers);
 
