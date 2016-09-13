@@ -6,6 +6,7 @@ import os
 import sys
 
 from math import cos, sin
+import time
 
 import shlex
 import numpy as np
@@ -1162,7 +1163,7 @@ class Hdf5():
         """
         Outputs solver #iterations & precision reached
         """
-        time = self.currentTime()
+        tm = self.currentTime()
         so = self._broadphase.model().simulation().oneStepNSProblem(0).\
             numericsSolverOptions()
         if so.solverId == Numerics.SICONOS_GENERIC_MECHANICAL_NSGS:
@@ -1190,10 +1191,11 @@ class Hdf5():
                 precision = so.dparam[1]
                 local_precision = so.dparam[2]
 
-        print('SolverInfos at time :', time,
+        print('SolverInfos at time :', tm,
               'iterations= ', iterations,
               'precision=', precision,
               'local_precision=', )
+        print('Wall time : ', time.time())
 
     def addMeshFromString(self, name, shape_data, scale=None):
         """
