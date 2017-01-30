@@ -2054,7 +2054,7 @@ class Hdf5():
             axis=orientation[0]
             assert len(axis) == 3
             angle=orientation[1]
-            assert type(angle) is float
+            assert isinstance(angle, float)
             n=sin(angle / 2.) / np.linalg.norm(axis)
 
             ori=[cos(angle / 2.), axis[0] * n, axis[1] * n, axis[2] * n]
