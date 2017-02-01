@@ -937,10 +937,16 @@ class Hdf5():
     def importNonSmoothLaw(self, name):
         if self._broadphase is not None:
             nslawClass = getattr(Kernel, self._nslaws[name].attrs['type'])
-            # only this one at the moment
-            assert(nslawClass == Kernel.NewtonImpactFrictionNSL)
-            nslaw = nslawClass(float(self._nslaws[name].attrs['e']), 0.,
-                               float(self._nslaws[name].attrs['mu']), 3)
+
+            if nslawClass is Kernel.NewtonImpactFrictionNSL:
+                nslaw = nslawClass(float(self._nslaws[name].attrs['e']), 0.,
+                                   float(self._nslaws[name].attrs['mu']), 3)
+            elif nslawClass is Kernel.NewtonImpactFrictionCohesionNSL:
+                nslaw = nslawClass(float(self._nslaws[name].attrs['e']), 0.,
+                                   float(self._nslaws[name].attrs['mu']),
+                                   float(self._nslaws[name].attrs['c']), 3)
+            else:
+                raise Exception("nslaw %s unsupport"%self._nslaws[name].attrs['type'])
             if use_proposed:
                 self._broadphase.insertNonSmoothLaw(nslaw,
                                         int(self._nslaws[name].attrs['gid1']),
@@ -2123,7 +2129,7 @@ class Hdf5():
 
             return obj.attrs['id']
 
-    def addNewtonImpactFrictionNSL(self, name, mu, e=0, collision_group1=0,
+    def addNewtonImpactFrictionNSL(self, name, mu, e=0, c=None, collision_group1=0,
                                    collision_group2=0):
         """
         Add a nonsmooth law for contact between 2 groups.
@@ -2136,7 +2142,11 @@ class Hdf5():
         """
         if name not in self._nslaws:
             nslaw=self._nslaws.create_dataset(name, (0,))
-            nslaw.attrs['type']='NewtonImpactFrictionNSL'
+            if c is None:
+                nslaw.attrs['type']='NewtonImpactFrictionNSL'
+            else:
+                nslaw.attrs['c']=c
+                nslaw.attrs['type']='NewtonImpactFrictionCohesionNSL'
             nslaw.attrs['mu']=mu
             nslaw.attrs['e']=e
             nslaw.attrs['gid1']=collision_group1
