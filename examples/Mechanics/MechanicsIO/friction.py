@@ -52,6 +52,7 @@ with Hdf5(mode='r+') as io:
     io.run(t0=0,
            T=10,
            h=0.01,
+           osi=Kernel.MoreauJeanCombinedProjectionOSI,
            multipoints_iterations=True,
            theta=0.50001,
            Newton_max_iter=1,
