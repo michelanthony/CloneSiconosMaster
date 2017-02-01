@@ -35,7 +35,7 @@
 class NewtonImpactFrictionNSL : public NonSmoothLaw
 {
 
-private:
+protected:
   /** serialization hooks
   */
   ACCEPT_SERIALIZATION(NewtonImpactFrictionNSL);
