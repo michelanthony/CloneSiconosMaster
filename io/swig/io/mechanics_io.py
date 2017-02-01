@@ -20,7 +20,8 @@ from contextlib import contextmanager
 import siconos.numerics as Numerics
 from siconos.kernel import \
     EqualityConditionNSL, \
-    Interaction, DynamicalSystem, TimeStepping
+    Interaction, DynamicalSystem, TimeStepping, \
+    TimeSteppingCombinedProjection, MoreauJeanCombinedProjectionOSI
 import siconos.kernel as Kernel
 
 # Siconos Mechanics imports
@@ -2347,15 +2348,24 @@ class Hdf5():
             """)
 
         # (6) Simulation setup with (1) (2) (3) (4) (5)
-        simulation=time_stepping(timedisc)
-        simulation.insertIntegrator(self._osi)
-        simulation.insertNonSmoothProblem(osnspb)
-        if use_proposed:
-            simulation.insertInteractionManager(self._broadphase)
+        if osi is Kernel.MoreauJeanCombinedProjectionOSI:
+            position = Kernel.MLCPProjectOnConstraints()
+            simulation = Kernel.TimeSteppingCombinedProjection(
+                timedisc, self._osi, osnspb, position, 2)
+            simulation.setProjectionMaxIteration(500)
+            simulation.setConstraintTolUnilateral(1e-10)
+            simulation.setConstraintTol(1e-10)
+        else:
+            simulation=time_stepping(timedisc)
+            simulation.insertIntegrator(self._osi)
+            simulation.insertNonSmoothProblem(osnspb)
 
         simulation.setNewtonOptions(Newton_options)
         simulation.setNewtonMaxIteration(Newton_max_iter)
         simulation.setNewtonTolerance(1e-10)
+
+        if use_proposed:
+            simulation.insertInteractionManager(self._broadphase)
 
         print ('import scene ...')
         self.importScene(t0, body_class, shape_class, face_class, edge_class)
