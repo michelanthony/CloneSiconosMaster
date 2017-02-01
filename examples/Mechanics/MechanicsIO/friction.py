@@ -21,7 +21,7 @@ with Hdf5() as io:
 
     # Definition of a non smooth law. As no group ids are specified it
     # is between contactors of group id 0.
-    io.addNewtonImpactFrictionNSL('contact', mu=0.5, e=0.0)
+    io.addNewtonImpactFrictionNSL('contact', mu=0.5, e=0.0, c=1.0)
 
     # Define an array of cubes on surfaces of increasing angle
     for i,angle in enumerate(np.linspace(0,np.pi,20)):
