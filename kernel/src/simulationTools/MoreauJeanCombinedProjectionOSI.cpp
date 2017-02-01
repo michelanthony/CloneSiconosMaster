@@ -92,7 +92,34 @@ bool MoreauJeanCombinedProjectionOSI::addInteractionInIndexSet(SP::Interaction i
 
 bool MoreauJeanCombinedProjectionOSI::removeInteractionInIndexSet(SP::Interaction inter, unsigned int i)
 {
-  assert(0);
-  return(0);
+  double y=0;
+  if (i==0)
+  {
+    y = (inter->y(i))->getValue(0); // for i=0 y(i) is the position
+    DEBUG_PRINTF("MoreauJeanOSI::addInteractionInIndexSet yref=%e, yDot=%e, y_estimated=%e.\n", y, yDot, y + gamma * h * yDot);
+  }
+  else if (i==1)
+  {
+    double h = _simulation->timeStep();
+    y = (inter->y(i - 1))->getValue(0); // for i=1 y(i-1) is the position
+    double yDot = (inter->y(i))->getValue(0); // for i=1 y(i) is the velocity
+    double gamma = 1.0 / 2.0;
+    if (_useGamma)
+    {
+      gamma = _gamma;
+    }
+    DEBUG_PRINTF("MoreauJeanOSI::addInteractionInIndexSet yref=%e, yDot=%e, y_estimated=%e.\n", y, yDot, y + gamma * h * yDot);
+    y += gamma * h * yDot;
+  }
+  else
+    assert(0);
+
+  assert(!isnan(y));
+
+  DEBUG_EXPR(
+    if (y > 0)
+      DEBUG_PRINT("MoreauJeanOSI::removeInteractionInIndexSet DEACTIVATE.\n");
+    );
+  return (y > 0.0);
 }
 
