@@ -172,6 +172,12 @@ FOREACH(_EXE ${_EXE_LIST_${_CURRENT_TEST_DIRECTORY}})
 
     SET_TESTS_PROPERTIES(${_EXE} PROPERTIES FAIL_REGULAR_EXPRESSION "FAILURE;Exception;failed;ERROR;test unsucceeded")
 
+    # do not enable CXX linker if we don't build cxx code ...
+    SET(WITH_CXX_ @WITH_CXX@)
+    IF(WITH_CXX_)
+      SET_TARGET_PROPERTIES(${_EXE} PROPERTIES LINKER_LANGUAGE CXX)
+    ENDIF(WITH_CXX_)
+
     if(CMAKE_SYSTEM_NAME MATCHES Windows)
       set_tests_properties(${_EXE} PROPERTIES ENVIRONMENT "Path=${COMPONENT_PATH}")
     endif()

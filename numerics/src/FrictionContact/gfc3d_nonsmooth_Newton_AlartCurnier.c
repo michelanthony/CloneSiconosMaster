@@ -30,7 +30,7 @@
 #include "fc3d_AlartCurnier_functions.h"
 #include "op3x3.h"
 #include "SparseBlockMatrix.h"
-#include "misc.h"
+#include "numerics_verbose.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -43,8 +43,8 @@
 
 #include "gfc3d_compute_error.h"
 #include "SiconosBlas.h"
-
-
+#include "NumericsMatrix.h"
+#include "NumericsSparseMatrix.h"
 /* #define DEBUG_MESSAGES 1 */
 /* #define DEBUG_STDOUT */
 #include <debug.h>
@@ -388,14 +388,14 @@ int gfc3d_nonsmooth_Newton_AlartCurnier_setDefaultSolverOptions(
   options->numberOfInternalSolvers = 0;
   options->isSet = 1;
   options->filterOn = 1;
-  options->iSize = 14;
-  options->dSize = 11;
+  options->iSize = 20;
+  options->dSize = 20;
   options->iparam = (int *) calloc(options->iSize, sizeof(int));
   options->dparam = (double *) calloc(options->dSize,  sizeof(double));
   options->dWork = NULL;
   solver_options_nullify(options);
-  options->iparam[0] = 200;    /* input :  itermax */
-  options->iparam[1] = 1;      /* output : #iter */
+  options->iparam[SICONOS_IPARAM_MAX_ITER] = 200;    /* input :  itermax */
+  options->iparam[SICONOS_IPARAM_ITER_DONE] = 1;      /* output : #iter */
   options->iparam[2] = 0;      /* unused */
   options->iparam[3] = 100000; /* nzmax*/
   options->iparam[4] = 0;      /* unused */
@@ -407,7 +407,8 @@ int gfc3d_nonsmooth_Newton_AlartCurnier_setDefaultSolverOptions(
 
   options->iparam[10] = 1;     /* 0 STD AlartCurnier, 1 JeanMoreau, 2 STD generated, 3 JeanMoreau generated */
 
-  options->dparam[0] = 1e-10;
+  options->dparam[SICONOS_DPARAM_TOL] = 1e-10;
+  options->dparam[SICONOS_FRICTION_3D_NSN_RHO] = 1.0;      /* default rho */
 
 
   options->internalSolvers = NULL;
@@ -524,7 +525,7 @@ void gfc3d_nonsmooth_Newton_AlartCurnier(
     /* allocate memory */
     assert(options->dWork == NULL);
     assert(options->iWork == NULL);
-    options->dWork = (double *) malloc(
+    options->dWork = (double *) calloc(
                        (localProblemSize + /* F */
                         3 * localProblemSize + /* A */
                         3 * localProblemSize + /* B */
@@ -533,7 +534,8 @@ void gfc3d_nonsmooth_Newton_AlartCurnier(
                         ACProblemSize + /* rhs */
                         ACProblemSize + /* tmp2 */
                         ACProblemSize + /* tmp3 */
-                        ACProblemSize   /* solution */) *  sizeof(double));
+                        ACProblemSize   /* solution */) ,
+                       sizeof(double));
 
     /* XXX big hack here */
     options->iWork = (int *) malloc(
@@ -619,11 +621,9 @@ void gfc3d_nonsmooth_Newton_AlartCurnier(
   // need to use the functions from NumericsMatrix --xhub
 
 
-  NumericsMatrix *AA_work = createNumericsMatrix(NM_SPARSE,  (int)J->m, (int)J->n);
-
   NumericsSparseMatrix* SM = newNumericsSparseMatrix();
   SM->triplet = J;
-  NumericsMatrix *AA = createNumericsMatrixFromData(NM_SPARSE,  (int)J->m, (int)J->n, SM);
+  NumericsMatrix *AA = NM_create_from_data(NM_SPARSE,  (int)J->m, (int)J->n, SM);
 
   info[0] = 1;
 
@@ -659,15 +659,13 @@ void gfc3d_nonsmooth_Newton_AlartCurnier(
     /* Solve: J X = -psi */
 
     /* Solve: AWpB X = -F */
-    NM_copy(AA, AA_work);
-
-    int info_solver = NM_gesv(AA_work, rhs);
+    int info_solver = NM_gesv(AA, rhs, true);
     if (info_solver > 0)
     {
       fprintf(stderr, "------------------------ GFC3D - NSN_AC - solver failed info = %d\n", info_solver);
       break;
       info[0] = 2;
-      CHECK_RETURN(!cs_check_triplet(NM_triplet(AA_work)));
+      CHECK_RETURN(!cs_check_triplet(NM_triplet(AA)));
     }
 
     /* Check the quality of the solution */
@@ -794,8 +792,6 @@ void gfc3d_nonsmooth_Newton_AlartCurnier(
   }
 #endif
 
-  freeNumericsMatrix(AA);
+  NM_free(AA);
   free(AA);
-  freeNumericsMatrix(AA_work);
-  free(AA_work);
 }

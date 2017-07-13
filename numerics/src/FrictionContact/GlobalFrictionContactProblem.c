@@ -18,9 +18,15 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <errno.h>
-
+#include "NumericsMatrix.h"
 #include "GlobalFrictionContactProblem.h"
-#include "misc.h"
+#include "numerics_verbose.h"
+
+
+
+/* #define DEBUG_MESSAGES */
+/* #define DEBUG_STDOUT */
+#include "debug.h"
 
 int globalFrictionContact_printInFile(GlobalFrictionContactProblem*  problem, FILE* file)
 {
@@ -35,8 +41,8 @@ int globalFrictionContact_printInFile(GlobalFrictionContactProblem*  problem, FI
   fprintf(file, "%d\n", d);
   int nc = problem->numberOfContacts;
   fprintf(file, "%d\n", nc);
-  printInFile(problem->M, file);
-  printInFile(problem->H, file);
+  NM_write_in_file(problem->M, file);
+  NM_write_in_file(problem->H, file);
   for (i = 0; i < problem->M->size1; i++)
   {
     fprintf(file, "%32.24e ", problem->q[i]);
@@ -63,13 +69,13 @@ int globalFrictionContact_newFromFile(GlobalFrictionContactProblem* problem, FIL
   problem->dimension = d;
   CHECK_IO(fscanf(file, "%d\n", &nc), &info);
   problem->numberOfContacts = nc;
-  problem->M = newNumericsMatrix();
+  problem->M = NM_new();
 
-  info = newFromFile(problem->M, file);
+  info = NM_new_from_file(problem->M, file);
   if (info) goto fail;
 
-  problem->H = newNumericsMatrix();
-  info = newFromFile(problem->H, file);
+  problem->H = NM_new();
+  info = NM_new_from_file(problem->H, file);
   if (info) goto fail;
 
   problem->q = (double *) malloc(problem->M->size1 * sizeof(double));
@@ -100,14 +106,14 @@ void freeGlobalFrictionContactProblem(GlobalFrictionContactProblem* problem)
 
   if (problem->M)
   {
-    freeNumericsMatrix(problem->M);
+    NM_free(problem->M);
     free(problem->M);
     problem->M = NULL;
   }
 
   if (problem->H)
   {
-    freeNumericsMatrix(problem->H);
+    NM_free(problem->H);
     free(problem->H);
     problem->H = NULL;
   }
@@ -189,6 +195,7 @@ void globalFrictionContact_display(GlobalFrictionContactProblem* problem)
 
 void gfc3d_init_workspace(GlobalFrictionContactProblem* problem)
 {
+  DEBUG_BEGIN("gfc3d_init_workspace(GlobalFrictionContactProblem* problem)\n");
   assert(problem);
   assert(problem->M);
 
@@ -201,16 +208,18 @@ void gfc3d_init_workspace(GlobalFrictionContactProblem* problem)
 
   if (!problem->workspace->factorized_M)
   {
-    problem->workspace->factorized_M = createNumericsMatrix(problem->M->storageType,
-                                               problem->M->size0,
-                                               problem->M->size1);
+    problem->workspace->factorized_M = NM_create(problem->M->storageType,
+                                                            problem->M->size0,
+                                                            problem->M->size1);
     NM_copy(problem->M, problem->workspace->factorized_M);
+    DEBUG_EXPR(NM_display(problem->workspace->factorized_M));
   }
 
   if (!problem->workspace->globalVelocity)
   {
     problem->workspace->globalVelocity = (double*)malloc(problem->M->size1 * sizeof(double));
   }
+  DEBUG_END("gfc3d_init_workspace(GlobalFrictionContactProblem* problem)\n");
 }
 
 void gfc3d_free_workspace(GlobalFrictionContactProblem* problem)
@@ -219,7 +228,7 @@ void gfc3d_free_workspace(GlobalFrictionContactProblem* problem)
   {
     if (problem->workspace->factorized_M)
     {
-      freeNumericsMatrix(problem->workspace->factorized_M);
+      NM_free(problem->workspace->factorized_M);
       free(problem->workspace->factorized_M);
       problem->workspace->factorized_M = NULL;
     }

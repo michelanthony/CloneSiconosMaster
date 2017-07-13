@@ -1,5 +1,5 @@
 #include "cadmbtb.hpp"
-#include "OccContactShape.hpp"
+
 #include "OccContactFace.hpp"
 #include "OccContactEdge.hpp"
 
@@ -12,7 +12,6 @@
 #include <BRepAdaptor_Curve.hxx>
 #include <BRep_Tool.hxx>
 #include <GeomLProp_SLProps.hxx>
-#include <TopoDS.hxx>
 #include <TopLoc_Location.hxx>
 
 #include <gp_Vec.hxx>

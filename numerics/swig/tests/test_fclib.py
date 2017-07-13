@@ -12,10 +12,7 @@ data_dir = working_dir + '/data/'
 solvers = (sn.SICONOS_GLOBAL_FRICTION_3D_NSGS,)
 solvers_reduced1 = (sn.SICONOS_FRICTION_3D_NSGS, sn.SICONOS_FRICTION_3D_NSN_AC)
 solvers_reduced2 = (sn.SICONOS_FRICTION_3D_NSN_AC,)  # sn.SICONOS_FRICTION_3D_NSN_FB)
-
-no = sn.NumericsOptions()
-no.verboseMode = 0
-
+solvers_reduced3 = (sn.SICONOS_FRICTION_3D_NSGS,)
 
 def condensed_from_global(fcp):
     # spsolve expect the indices to be cint aka 32 bits int
@@ -33,7 +30,7 @@ def condensed_from_global(fcp):
 
     # this is a hack to deal with the inability of fc3d solvers to work with
     # sparse matrices
-    _, Wsbm = sn.sparseToSBM(3, WW)
+    _, Wsbm = sn.SBM_from_csparse(3, WW)
     fcp_reduced.M = Wsbm
     fcp_reduced.mu = fcp.mu
     fcp_reduced.q = fcp.b + qprime
@@ -42,12 +39,13 @@ def condensed_from_global(fcp):
 
 def solve_reduced(fcp, solver_reduced):
     SO_reduced = sn.SolverOptions(solver_reduced)
+    SO_reduced.iparam[0] =100000
     SO_reduced.dparam[0] = np.sqrt(fcp.numberOfContacts)*1e-9
     size_reaction = fcp.numberOfContacts * 3
     reaction_reduced = np.zeros((size_reaction,))
     velocities_reduced = np.zeros((size_reaction,))
 
-    return sn.fc3d_driver(fcp, reaction_reduced, velocities_reduced, SO_reduced, no)
+    return sn.fc3d_driver(fcp, reaction_reduced, velocities_reduced, SO_reduced)
 
 
 def solve_global(fcp, solver):
@@ -59,7 +57,7 @@ def solve_global(fcp, solver):
     reaction = np.zeros((size_reaction,))
     velocities = np.zeros((size_reaction,))
     global_velocities = np.zeros((n,))
-    return sn.gfc3d_driver(fcp, reaction, velocities, global_velocities, SO, no)
+    return sn.gfc3d_driver(fcp, reaction, velocities, global_velocities, SO)
 
 
 def test_gfc3d():
@@ -98,9 +96,9 @@ def test_fc3d():
     for d in data_files:
         full_path = data_dir + d
         if os.path.isfile(full_path):
-
+            sn.numerics_set_verbose(1)
             fcp = sn.frictionContact_fclib_read(full_path)
-            for s in solvers_reduced2:
+            for s in solvers_reduced3:
                 res = solve_reduced(fcp, s)
                 if res:
                     print('Solver {:} on problem {:} failed with info = {:}'.format(sn.solver_options_id_to_name(s), d, res))

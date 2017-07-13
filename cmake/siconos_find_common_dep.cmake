@@ -20,12 +20,22 @@ compile_with(MlcpSimplex)
 compile_with(Pthread)
 IF(GAMS_DIR)
   SET(GAMS_C_API_FIND_REQUIRED TRUE)
-  COMPILE_WITH(GamsCApi)
+ENDIF(GAMS_DIR)
+COMPILE_WITH(GamsCApi)
+IF(GAMSCAPI_FOUND)
   # needed for siconosconfig.h
+  IF(NOT GAMS_DIR)
+    SET(GAMS_DIR " ")
+  ENDIF(NOT GAMS_DIR)
   SET(GAMS_MODELS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/numerics/share/gams")
   SET(GAMS_MODELS_SHARE_DIR "${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/gams")
-ENDIF(GAMS_DIR)
+  #  IF(UNIX AND NOT APPLE)
+  #    SET(SICONOS_DEFAULT_LINKER_OPTIONS "${SICONOS_DEFAULT_LINKER_OPTIONS} -Wl,-rpath-link,${GAMS_DIR}")
+  #  ENDIF(UNIX AND NOT APPLE)
+ENDIF(GAMSCAPI_FOUND)
+
 compile_with(PathFerris)
+compile_with(PathVI)
 compile_with(LpSolve)
 if(LpSolve_FOUND)
   set(HAS_ONE_LP_SOLVER TRUE)
@@ -58,6 +68,24 @@ if(WITH_UMFPACK)
   compile_with(Umfpack REQUIRED)
 endif()
 
+# --- SUPERLU ---
+IF (WITH_SUPERLU AND WITH_SUPERLU_MT)
+  message(FATAL_ERROR "Both SuperLU and SuperLU_MT are enabled. Due to symbol collision, both cannot be enabled at the same time")
+ENDIF()
+
+if(WITH_SUPERLU)
+  compile_with(SuperLU REQUIRED)
+endif()
+
+if(WITH_SUPERLU_MT)
+  compile_with(SuperLU_MT REQUIRED)
+endif()
+
+# not ready yet
+#if(WITH_SUPERLU_dist)
+#  compile_with(SuperLU_dist REQUIRED)
+#endif()
+
 # --- Fclib ---
 IF(WITH_FCLIB)
   COMPILE_WITH(FCLIB REQUIRED)   
@@ -68,14 +96,17 @@ IF(WITH_FCLIB)
   ENDIF()
 ENDIF()
 
-# --- Boost ---
-compile_with(Boost 1.47 REQUIRED)
+IF(WITH_CXX)
+  # --- Boost ---
+  compile_with(Boost 1.47 REQUIRED)
+ENDIF(WITH_CXX)
 
 #SET(WITH_BOOST_LOG TRUE)
 IF(WITH_BOOST_LOG)
   compile_with(Boost 1.47 COMPONENTS log  REQUIRED)
   APPEND_CXX_FLAGS("-DBOOST_LOG_DYN_LINK")
 ENDIF()
+
 # --- Bullet ---
 IF(WITH_BULLET)
   COMPILE_WITH(Bullet REQUIRED)
@@ -94,6 +125,7 @@ IF(WITH_OCC)
     COMPILE_WITH(OCE 0.15 REQUIRED ONLY mechanics)
     SET(HAVE_OCC TRUE)
     LIST(REMOVE_ITEM SICONOS_LINK_LIBRARIES DRAWEXE)
+    LIST(REMOVE_ITEM mechanics_LINK_LIBRARIES DRAWEXE)
   endif()
 ENDIF()
 
@@ -143,6 +175,9 @@ IF(WITH_MECHANISMS)
 
   endif(OCE_FOUND)
   SET(HAVE_MECHANISMS TRUE)
+  if(WITH_OCC)
+    SET(HAVE_OCC TRUE)
+  endif()
 endif()
 
 # -- VTK --
@@ -191,11 +226,11 @@ if(WITH_PYTHON_WRAPPER)
       SET(SICONOS_FORCE_NPY_INT32 TRUE)
       MESSAGE(STATUS "Old version of scipy detected. Support for 64 bits int was added in 0.14.0, forcing 32 bits int for python bindings")
     ENDIF(scipy_VERSION VERSION_LESS "0.14.0")
+    find_python_module(pyhull)
+    if(NOT pyhull_FOUND)
+      message(STATUS "Warning, python pyhull package not found. Some examples may not run properly. Try pip install pyhull.")
+    endif()
   ENDIF(NOT NO_RUNTIME_BUILD_DEP)
-  find_python_module(pyhull)
-  if(NOT pyhull_FOUND)
-    message(STATUS "Warning, python pyhull package not found. Some examples may not run properly. Try pip install pyhull.")
-  endif()
 endif()
 
 

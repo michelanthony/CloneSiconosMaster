@@ -32,6 +32,7 @@
 #define DEBUG_MESSAGES
 #define DEBUG_STDOUT
 #include "debug.h"
+#include "numerics_verbose.h"
 
 
 
@@ -52,13 +53,13 @@ void fc3d_ACLMFixedPoint(FrictionContactProblem* problem, double *reaction, doub
   int itermax = iparam[0];
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+  double norm_q = cblas_dnrm2(nc*3 , problem->q , 1);
 
 
 
   if (options->numberOfInternalSolvers < 1)
   {
-    numericsError("fc3d_ACLMFixedpoint", "The ACLM Fixed Point method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
+    numerics_error("fc3d_ACLMFixedpoint", "The ACLM Fixed Point method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
   }
 
   SolverOptions * internalsolver_options = options->internalSolvers;
@@ -139,7 +140,7 @@ void fc3d_ACLMFixedPoint(FrictionContactProblem* problem, double *reaction, doub
     cumul_iter +=  internalsolver_options->iparam[7];
     /* **** Criterium convergence **** */
 
-    fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq, &error);
+    fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q, &error);
 
     if (options->callback)
     {

@@ -26,6 +26,8 @@
 /* #define DEBUG_STDOUT   */
 /* #define DEBUG_MESSAGES   */
 #include "debug.h"
+#include "numerics_verbose.h"
+
 /* #define min(a,b) (a<=b?a:b) */
 
 void variationalInequality_FixedPointProjection(VariationalInequality* problem, double *x, double *w, int* info, SolverOptions* options)
@@ -45,8 +47,8 @@ void variationalInequality_FixedPointProjection(VariationalInequality* problem, 
   double error = 1.; /* Current error */
   int hasNotConverged = 1;
 
-  double * xtmp = (double *)malloc(n * sizeof(double));
-  double * wtmp = (double *)malloc(n * sizeof(double));
+  double * xtmp = (double *)calloc(n , sizeof(double));
+  double * wtmp = (double *)calloc(n , sizeof(double));
 
   double rho = 0.0, rho_k =0.0;
   int isVariable = 0;

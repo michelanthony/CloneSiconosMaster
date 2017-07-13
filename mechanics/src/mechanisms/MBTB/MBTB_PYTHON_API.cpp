@@ -248,6 +248,9 @@ void MBTB_BodyBuild(unsigned int numDS, const std::string& BodyName,  double mas
   p =new MBTB_Body(q10,v10,mass,inertialMatrix,modelCenterMass,
                    BodyName, BodyName);
 
+
+  // We fix a ds number just to be able to use postprocessing based on hdf5 file
+  p->setNumber(numDS+1);
   // set external forces plugin
   if(pluginFextFct.length()>1)
   {
@@ -345,7 +348,7 @@ void MBTB_BodyBuild(unsigned int numDS, const std::string& BodyName,  double mas
 
 
   sDS[numDS].reset(p);
-  sAllDS.insert(sDS[numDS]);
+  //sAllDS.insert(sDS[numDS]);
   // std::cout << "MBTB_BodyBuild()" <<std::endl;
   // sDS[numDS]->display();
   // myModel->nonSmoothDynamicalSystem()->insertDynamicalSystem(sDS[numDS]);
@@ -372,7 +375,6 @@ void MBTB_JointBuild(unsigned int numJ,const std::string& JointName,
   /*BUILD H SimpleMatrix and NSLAW*/
   if(jointType == PIVOT_0 || jointType == PIVOT_1)
   {
-    lNbEq = PivotJointR::numberOfConstraints();
     nbDS=1;
     if(jointType == PIVOT_1)
     {
@@ -382,17 +384,11 @@ void MBTB_JointBuild(unsigned int numJ,const std::string& JointName,
   else if(jointType == PRISMATIC_0)
   {
     nbDS=1;
-    lNbEq =PrismaticJointR::numberOfConstraints();
   }
-  SP::SimpleMatrix lH(new SimpleMatrix(lNbEq ,nbDS*qDim));
-  lH->zero();
-  SP::EqualityConditionNSL lNSL(new EqualityConditionNSL(lNbEq));
-
 
   SP::SiconosVector P(new SiconosVector(3));
   SP::SiconosVector A(new SiconosVector(3));
   SP::SiconosVector ds1CenterOfMass = sDS[indexDS1]->centerOfMass();
-  //DynamicalSystemsSet lallDS;
   P->setValue(0,jointPosition->getValue(3)-ds1CenterOfMass->getValue(0));
   P->setValue(1,jointPosition->getValue(4)-ds1CenterOfMass->getValue(1));
   P->setValue(2,jointPosition->getValue(5)-ds1CenterOfMass->getValue(2));
@@ -402,29 +398,35 @@ void MBTB_JointBuild(unsigned int numJ,const std::string& JointName,
   sJointRelations[numJ]= new MBTB_JointR();
   if(jointType == PIVOT_1)
   {
-    sJointRelations[numJ]->_jointR.reset(new PivotJointR(sDS[ indexDS1],sDS[indexDS2],P,A));
+    sJointRelations[numJ]->_jointR.reset(new PivotJointR(P,A,false,sDS[ indexDS1],sDS[indexDS2]));
     sJointRelations[numJ]->_ds1 = sDS[indexDS1];
-    sAllDSByInter[numJ].insert(sDS[indexDS1]);
-    sAllDSByInter[numJ].insert(sDS[indexDS2]);
+    //sAllDSByInter[numJ].insert(sDS[indexDS1]);
+    //sAllDSByInter[numJ].insert(sDS[indexDS2]);
   }
   else if(jointType == PIVOT_0)
   {
-    sJointRelations[numJ]->_jointR.reset(new PivotJointR(sDS[indexDS1],P,A,false));
+    sJointRelations[numJ]->_jointR.reset(new PivotJointR(P,A,false,sDS[indexDS1]));
     sJointRelations[numJ]->_ds1 = sDS[indexDS1];
-    sAllDSByInter[numJ].insert(sDS[indexDS1]);
+    // sAllDSByInter[numJ].insert(sDS[indexDS1]);
   }
   else if(jointType == PRISMATIC_0)
   {
-    sJointRelations[numJ]->_jointR.reset(new PrismaticJointR(sDS[indexDS1],A));
+    sJointRelations[numJ]->_jointR.reset(new PrismaticJointR(A,false,sDS[indexDS1]));
     sJointRelations[numJ]->_ds1 = sDS[indexDS1];
-    sAllDSByInter[numJ].insert(sDS[indexDS1]);
+    // sAllDSByInter[numJ].insert(sDS[indexDS1]);
   }
+
+  lNbEq = sJointRelations[numJ]->_jointR->numberOfConstraints();
+
+  SP::SimpleMatrix lH(new SimpleMatrix(lNbEq ,nbDS*qDim));
+  lH->zero();
+  SP::EqualityConditionNSL lNSL(new EqualityConditionNSL(lNbEq));
+
   sJointRelations[numJ]->_jointR->setJachq(lH);
 //  sInterJoints[numJ].reset(new Interaction(JointName, sAllDSByInter[numJ],
 //                                           numJ, lNbEq , lNSL,
 //                                           sJointRelations[numJ]->_jointR));
-  sInterJoints[numJ].reset(new Interaction(lNbEq , lNSL,
-                                           sJointRelations[numJ]->_jointR));
+  sInterJoints[numJ].reset(new Interaction(lNSL, sJointRelations[numJ]->_jointR));
   sJointRelations[numJ]->_interaction = sInterJoints[numJ];
   // myModel->nonSmoothDynamicalSystem()->link(sInterJoints[numJ],
   //                                           sDS[indexDS1]);
@@ -451,15 +453,15 @@ void MBTB_ContactBuild(unsigned int numContact, const std::string& ContactName,
   {
     sContacts[numContact]->_et=et;
     SP::NonSmoothLaw nslaw0(new NewtonImpactFrictionNSL(en,et,mu,3));
-    sInterContacts[numContact].reset(new Interaction(3,nslaw0,sContacts[numContact]->relation(),numContact));
+    sInterContacts[numContact].reset(new Interaction(nslaw0,sContacts[numContact]->relation()));
     // MB : contactName is already in MBTB_Contact!
     // sInterContacts[numContact]->setId(ContactName);
   }
   else
   {
     SP::NewtonImpactNSL lNSL(new NewtonImpactNSL(sContacts[numContact]->_en));
-    sInterContacts[numContact].reset(new Interaction(1,lNSL,
-                                                     sContacts[numContact]->relation(),numContact));
+    sInterContacts[numContact].reset(new Interaction(lNSL,
+                                                     sContacts[numContact]->relation()));
 //    sInterContacts[numContact]->setId(ContactName);
   }
 
@@ -538,7 +540,7 @@ void  MBTB_initSimu(double hTS, int withProj)
   // -- (3) one step non smooth problem
   //osnspb.reset(new Equality());
   //osnspb.reset(new MLCP(SICONOS_MLCP_PATH));
-  SP::LinearOSNS osnspb(new GenericMechanical(SICONOS_FRICTION_3D_ONECONTACT_NSN_AC_GP));
+  SP::LinearOSNS osnspb(new GenericMechanical(SICONOS_FRICTION_3D_ONECONTACT_NSN_GP));
   //SP::LinearOSNS osnspb(new GenericMechanical());
   osnspb->setKeepLambdaAndYState(true);
   //osnspb->numericsSolverOptions()->iparam[1]=0;
@@ -687,9 +689,6 @@ void  MBTB_initSimu(double hTS, int withProj)
   fp = fopen("simulation_results.dat", "w");
   _MBTB_printHeader(fp);
   fclose(fp) ;
-  NumericsOptions global_options;
-  global_options.verboseMode=0;
-  setNumericsOptions(&global_options);
   cout <<"====> end of initialisation" <<endl<<endl;
 }
 SP::Model MBTB_model()
@@ -759,7 +758,7 @@ void MBTB_moveBodyToPosWithSpeed(unsigned int numDS, SP::SiconosVector aPos, SP:
 {
   SP::SiconosVector q = sDS[numDS]->q();
   *q= *aPos;
-  SP::SiconosVector v = sDS[numDS]->velocity();
+  SP::SiconosVector v = sDS[numDS]->twist();
   *v= *aVel;
   MBTB_updateDSFromSiconos();
   _MBTB_updateContactFromDS();
@@ -829,9 +828,9 @@ void MBTB_BodySetIParam(unsigned int paramId,unsigned int bodyId,int v)
 }
 void MBTB_BodySetVelocity(unsigned int numDS, SP::SiconosVector aVel)
 {
-  SP::SiconosVector v = sDS[numDS]->velocity();
+  SP::SiconosVector v = sDS[numDS]->twist();
   *v= *aVel;
-  SP::SiconosVector v0 = sDS[numDS]->v0();
+  SP::SiconosVector v0 = sDS[numDS]->twist0();
   *v0=*aVel;
 }
 void MBTB_SetDParam(unsigned int paramId,double v)

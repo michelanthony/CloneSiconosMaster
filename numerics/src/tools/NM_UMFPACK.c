@@ -18,10 +18,9 @@
 
 #include "NumericsMatrix_private.h"
 #include "NumericsMatrix.h"
-#include "NumericsOptions.h"
-
+#include "NumericsSparseMatrix.h"
 #include "debug.h"
-#include "misc.h"
+#include "numerics_verbose.h"
 
 #ifdef WITH_UMFPACK
 
@@ -34,7 +33,7 @@ NM_UMFPACK_WS* NM_UMFPACK_factorize(NumericsMatrix* A)
     return (NM_UMFPACK_WS*) params->solver_data;
   }
 
-  params->solver_data = (NM_UMFPACK_WS*)calloc(1, sizeof(NM_UMFPACK_WS));
+  params->solver_data = calloc(1, sizeof(NM_UMFPACK_WS));
   NM_UMFPACK_WS* umfpack_ws = (NM_UMFPACK_WS*) params->solver_data;
 
   UMFPACK_FN(defaults) (umfpack_ws->control);

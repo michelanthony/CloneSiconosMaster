@@ -21,49 +21,42 @@
 #include <time.h>
 #include <float.h>
 #include <assert.h>
-
-#include "NumericsOptions.h"
 #include "SiconosConfig.h"
 #include "gfc3d_Solvers.h"
+#include "NonSmoothDrivers.h"
+#include "numerics_verbose.h"
+
 int * Global_ipiv = NULL;
 int  Global_MisInverse = 0;
 int  Global_MisLU = 0;
 
-char *SICONOS_GLOBAL_FRICTION_3D_NSGS_WR_STR = "GFC3D_NSGS_WR";
-char *SICONOS_GLOBAL_FRICTION_3D_NSN_AC_WR_STR = "GFC3D_NSN_AC_WR";
-char *SICONOS_GLOBAL_FRICTION_3D_NSGSV_WR_STR = "GFC3D_NSGSV_WR";
-char *SICONOS_GLOBAL_FRICTION_3D_PROX_WR_STR = "GFC3D_PROX_WR";
-char *SICONOS_GLOBAL_FRICTION_3D_DSFP_WR_STR = "GFC3D_DSFP_WR";
-char *SICONOS_GLOBAL_FRICTION_3D_TFP_WR_STR = "GFC3D_TFP_WR";
-char *SICONOS_GLOBAL_FRICTION_3D_NSGS_STR = "GFC3D_NSGS";
-char *SICONOS_GLOBAL_FRICTION_3D_NSN_AC_STR = "GFC3D_NSN_AC";
-char * SICONOS_GLOBAL_FRICTION_3D_GAMS_PATH_STR = "GFC3D_GAMS_PATH";
-char * SICONOS_GLOBAL_FRICTION_3D_GAMS_PATHVI_STR = "GFC3D_GAMS_PATHVI";
+const char* const SICONOS_GLOBAL_FRICTION_3D_NSGS_WR_STR = "GFC3D_NSGS_WR";
+const char* const SICONOS_GLOBAL_FRICTION_3D_NSN_AC_WR_STR = "GFC3D_NSN_AC_WR";
+const char* const SICONOS_GLOBAL_FRICTION_3D_NSGSV_WR_STR = "GFC3D_NSGSV_WR";
+const char* const SICONOS_GLOBAL_FRICTION_3D_PROX_WR_STR = "GFC3D_PROX_WR";
+const char* const SICONOS_GLOBAL_FRICTION_3D_DSFP_WR_STR = "GFC3D_DSFP_WR";
+const char* const SICONOS_GLOBAL_FRICTION_3D_TFP_WR_STR = "GFC3D_TFP_WR";
+const char* const SICONOS_GLOBAL_FRICTION_3D_NSGS_STR = "GFC3D_NSGS";
+const char* const SICONOS_GLOBAL_FRICTION_3D_NSN_AC_STR = "GFC3D_NSN_AC";
+const char* const  SICONOS_GLOBAL_FRICTION_3D_GAMS_PATH_STR = "GFC3D_GAMS_PATH";
+const char* const  SICONOS_GLOBAL_FRICTION_3D_GAMS_PATHVI_STR = "GFC3D_GAMS_PATHVI";
 
 
-int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction , double *velocity, double* globalVelocity,  SolverOptions* options, NumericsOptions* global_options)
+int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction , double *velocity, double* globalVelocity,  SolverOptions* options)
 {
-
-  /* Set global options */
-  setNumericsOptions(global_options);
-
-  /* If the options for solver have not been set, read default values in .opt file */
-  int NoDefaultOptions = options->isSet; /* true(1) if the SolverOptions structure has been filled in else false(0) */
-
-  if (!NoDefaultOptions)
-    solver_options_read(3, options);
+  assert(options->isSet);
 
   if (verbose > 0)
     solver_options_print(options);
 
   /* Solver name */
-  /*  char * name = options->solverName;*/
+  /*  const char* const  name = options->solverName;*/
 
 
   int info = -1 ;
 
   if (problem->dimension != 3)
-    numericsError("gfc3d_driver", "Dimension of the problem : problem-> dimension is not compatible or is not set");
+    numerics_error("gfc3d_driver", "Dimension of the problem : problem-> dimension is not compatible or is not set");
 
 
   /* Non Smooth Gauss Seidel (NSGS) */
@@ -97,7 +90,7 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction , doubl
     Global_ipiv = NULL;
     Global_MisInverse = 0;
     Global_MisLU = 0;
-    gfc3d_globalAlartCurnier_wr(problem, reaction , velocity, globalVelocity, &info, options);
+    gfc3d_nonsmooth_Newton_AlartCurnier_wr(problem, reaction , velocity, globalVelocity, &info, options);
     break;
 
   }
@@ -175,7 +168,7 @@ int gfc3d_driver(GlobalFrictionContactProblem* problem, double *reaction , doubl
 
 }
 
-int checkTrivialCaseGlobal(int n, double* q, double* velocity, double* reaction, double * globalVelocity, SolverOptions* options)
+int gfc3d_checkTrivialCaseGlobal(int n, double* q, double* velocity, double* reaction, double * globalVelocity, SolverOptions* options)
 {
   /* norm of vector q */
   /*   double qs = cblas_dnrm2( n , q , 1 ); */

@@ -23,8 +23,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include "numerics_verbose.h"
 
-#define VERBOSE_DEBUG
+//#define VERBOSE_DEBUG
 
 void fc3d_HyperplaneProjection(FrictionContactProblem* problem, double *reaction, double *velocity, int* info, SolverOptions* options)
 {
@@ -44,7 +45,7 @@ void fc3d_HyperplaneProjection(FrictionContactProblem* problem, double *reaction
   int lsitermax = iparam[1];
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+  double norm_q = cblas_dnrm2(nc*3 , problem->q , 1);
  
 
 
@@ -57,24 +58,24 @@ void fc3d_HyperplaneProjection(FrictionContactProblem* problem, double *reaction
   int contact; /* Number of the current row of blocks in M */
   int nLocal = 3;
   dparam[0] = dparam[2]; // set the tolerance for the local solver
-  double * velocitytmp = (double *)malloc(n * sizeof(double));
-  double * reactiontmp = (double *)malloc(n * sizeof(double));
-  double * reactiontmp2 = (double *)malloc(n * sizeof(double));
-  double * reactiontmp3 = (double *)malloc(n * sizeof(double));
+  double * velocitytmp = (double *)calloc(n, sizeof(double));
+  double * reactiontmp = (double *)calloc(n, sizeof(double));
+  double * reactiontmp2 = (double *)calloc(n, sizeof(double));
+  double * reactiontmp3 = (double *)calloc(n, sizeof(double));
 
-  double tau = 1.0;
+  /* double tau = 1.0; */
   double sigma = 0.99;
 
-  if (dparam[3] > 0.0)
-  {
-    tau = dparam[3];
-  }
-  else
-  {
-    printf("Hyperplane Projection method. tau <=0  is not well defined\n");
-    printf("Hyperplane Projection method. rho is set to 1.0\n");
+  /* if (dparam[3] > 0.0) */
+  /* { */
+  /*   tau = dparam[3]; */
+  /* } */
+  /* else */
+  /* { */
+  /*   printf("Hyperplane Projection method. tau <=0  is not well defined\n"); */
+  /*   printf("Hyperplane Projection method. rho is set to 1.0\n"); */
 
-  }
+  /* } */
   if (dparam[4] > 0.0 && dparam[4] < 1.0)
   {
     sigma = dparam[4];
@@ -93,7 +94,7 @@ void fc3d_HyperplaneProjection(FrictionContactProblem* problem, double *reaction
     cblas_dcopy(n , q , 1 , velocitytmp, 1);
     cblas_dcopy(n , reaction , 1 , reactiontmp, 1);
 
-    prodNumericsMatrix(n, n, 1.0, M, reactiontmp, 1.0, velocitytmp);
+    NM_gemv(1.0, M, reactiontmp, 1.0, velocitytmp);
 
 
     // projection for each contact
@@ -137,7 +138,7 @@ void fc3d_HyperplaneProjection(FrictionContactProblem* problem, double *reaction
 
       cblas_dcopy(n , q , 1 , velocitytmp, 1);
 
-      prodNumericsMatrix(n, n, 1.0, M, reactiontmp2, 1.0, velocitytmp);
+      NM_gemv(1.0, M, reactiontmp2, 1.0, velocitytmp);
 
 
 
@@ -178,7 +179,7 @@ void fc3d_HyperplaneProjection(FrictionContactProblem* problem, double *reaction
     }
 
     /* **** Criterium convergence **** */
-    fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq, &error);
+    fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q, &error);
 
     if (options->callback)
     {

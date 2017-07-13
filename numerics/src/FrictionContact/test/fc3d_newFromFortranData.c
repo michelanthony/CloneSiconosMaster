@@ -19,7 +19,8 @@
 #include <stdlib.h>
 #include "NonSmoothDrivers.h"
 #include "frictionContact_test_function.h"
-
+#include "SparseBlockMatrix.h"
+#include "FrictionContactProblem.h"
 
 int main(void)
 {
@@ -35,11 +36,11 @@ int main(void)
   double W[] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1};
 
 
-  SparseBlockCoordinateMatrix* MC = newSparseBlockCoordinateMatrix3x3fortran(m, n, 3, row, column, W);
+  SparseBlockCoordinateMatrix* MC =  SBCM_new_3x3(m, n, 3, row, column, W);
 
-  SparseBlockStructuredMatrix* M = SBCMToSBM(MC);
+  SparseBlockStructuredMatrix* M = SBCM_to_SBM(MC);
 
-  NumericsMatrix* NM = newSparseNumericsMatrix(m * 3, n * 3, M);
+  NumericsMatrix* NM = NM_new_SBM(m * 3, n * 3, M);
 
   FrictionContactProblem* FC = frictionContactProblem_new(3, 3, NM, q, mu);
 
@@ -56,7 +57,7 @@ int main(void)
   free(M->index1_data);
   free(M->index2_data);
   free(M);
-  freeSparseBlockCoordinateMatrix3x3fortran(MC);
+   SBCM_free_3x3(MC);
   free(MC);
   free(FC);
 

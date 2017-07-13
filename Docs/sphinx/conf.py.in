@@ -338,6 +338,7 @@ intersphinx_mapping = {'python': ('https://docs.python.org', None),
 
 path_to_numerics = os.path.join('@CMAKE_SOURCE_DIR@', 'numerics')
 
+
 def starting_with(prefixes):
     try:
         importlib.import_module('siconos.numerics')
@@ -350,6 +351,7 @@ def starting_with(prefixes):
 
 path_to_kernel = os.path.join('@CMAKE_SOURCE_DIR@', 'kernel')
 
+
 def under_directory(dirs):
     try:
         importlib.import_module('siconos.kernel')
@@ -361,6 +363,7 @@ def under_directory(dirs):
     except:
         return ''
 
+
 def source_read(app, docname, source):
     m = re.search(':eval:`(.*)`.*', source[0])
     if m is not None:
@@ -370,3 +373,5 @@ def source_read(app, docname, source):
 
 def setup(app):
     app.connect('source-read', source_read)
+
+autodoc_member_order = 'bysource'

@@ -23,7 +23,7 @@
 #include <assert.h>
 
 #include "SiconosBlas.h"
-#include "Newton_Methods.h"
+#include "Newton_methods.h"
 #include "SiconosSets.h"
 
 //#define DEBUG_STDOUT
@@ -155,11 +155,13 @@ watchdog_step:
       ref_merit = data_NMS->ref_merit;
       if (dotprod < 0.0) /* check condition on <JacThetaF_merit, z_c(0) - z_c(T_k)>*/
       {
-        preRHS = -data_NMS->sigma*dotprod; /* we expect a plus in the LS function */
+//        preRHS = -data_NMS->sigma*dotprod; /* we expect a plus in the LS function */
+        preRHS = -dotprod; /* we expect a plus in the LS function */
       }
       else
       {
-        preRHS = -data_NMS->sigma*ref_merit;
+//        preRHS = -data_NMS->sigma*ref_merit;
+        preRHS = -ref_merit;
       }
 
       data_NMS->ls_data->z = NMS_checkpoint_0(data_NMS, n);
@@ -216,11 +218,13 @@ watchdog_step:
       /* check is reversed because we compute the <JacThetaF_merit, d_B - z_b(0)> */
       if (dotprod > 0.0) /* check condition on <JacThetaF_merit, z_b(0) - z_b(T_k)>*/
       {
-        preRHS = data_NMS->sigma*dotprod; /* we expect a plus in the LS function */
+//        preRHS = data_NMS->sigma*dotprod; /* we expect a plus in the LS function */
+        preRHS = dotprod; /* we expect a plus in the LS function */
       }
       else
       {
-        preRHS = -data_NMS->sigma*data_NMS->merit_bestpoint; /* we expect a plus in the LS function */
+//        preRHS = -data_NMS->sigma*data_NMS->merit_bestpoint; /* we expect a plus in the LS function */
+        preRHS = -data_NMS->merit_bestpoint; /* we expect a plus in the LS function */
       }
 
       data_NMS->ls_data->z = NMS_bestpoint(data_NMS, n);
@@ -328,7 +332,7 @@ NMS_data* create_NMS_data(unsigned size, int matrix_type, int* restrict iparam, 
   data->checkpoint = (double*)malloc(2*size*sizeof(double));
   data->bestpoint = (double*)malloc(size*sizeof(double));
   data->workspace = (double*)malloc(5*size*sizeof(double));
-  data->H = createNumericsMatrix(matrix_type, size, size);
+  data->H = NM_create(matrix_type, size, size);
   data->ls_data = (search_data *)malloc(sizeof(search_data));
 
   /* set to NULL stuff that we can't create here */
@@ -380,10 +384,11 @@ void free_NMS_data(NMS_data* data)
   free(data->checkpoint);
   free(data->bestpoint);
   free(data->workspace);
-  freeNumericsMatrix(data->H);
+  NM_free(data->H);
   free(data->H);
   free_siconos_set(data->set);
   free(data->set);
+  free_ls_data(data->ls_data);
   free(data->ls_data);
 
   if (data->path_data)

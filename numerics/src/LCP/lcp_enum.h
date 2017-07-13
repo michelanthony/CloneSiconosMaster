@@ -15,12 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
 */
+
+/*! \file lcp_enum.h
+ * \brief functions for solving LCP using enumeration */
+
 #ifndef LCP_ENUM_H
 #define LCP_ENUM_H
 
 #include "SiconosConfig.h"
-#include "LinearComplementarityProblem.h"
-#include "SolverOptions.h"
+#include "NumericsFwd.h"
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
 extern "C"

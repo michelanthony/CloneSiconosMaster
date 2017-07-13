@@ -16,6 +16,7 @@
 #include "NumericsMatrix.h"
 #include "LinearComplementarityProblem.h"
 #include "LCP_Solvers.h"
+#include "SolverOptions.h"
 
 #ifdef HAVE_GAMS_C_API
 
@@ -46,7 +47,7 @@ void lcp_gams(LinearComplementarityProblem* problem, double *z, double *w, int *
   const char defModel[] = SPACE_CONC(GAMS_MODELS_SHARE_DIR, "/lcp.gms");
   const char defGAMSdir[] = GAMS_DIR;
 
-  SN_Gams_set_dirs(options->solverParameters, defModel, defGAMSdir, model, sysdir, "/lcp.gms");
+  SN_Gams_set_dirs((SN_GAMSparams*)options->solverParameters, defModel, defGAMSdir, model, sysdir, "/lcp.gms");
 
   /* Create objects */
   if (! gamsxCreateD (&Gptr, sysdir, msg, sizeof(msg))) {

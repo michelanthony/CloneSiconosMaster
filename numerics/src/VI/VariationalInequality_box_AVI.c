@@ -21,15 +21,16 @@
 #include "Relay_Solvers.h"
 #include "SiconosSets.h"
 #include "SiconosBlas.h"
-#include "Newton_Methods.h"
+#include "Newton_methods.h"
 #include "VI_Newton.h"
+#include "sanitizer.h"
 
 typedef struct {
   NumericsMatrix* mat;
   RelayProblem* relay_pb;
 } vi_box_AVI_LSA_data;
 
-static void vi_compute_decent_dir_by_avi(void* problem, double* z, double* F, double* descent_dir, SolverOptions* options)
+static int vi_compute_decent_dir_by_avi(void* problem, double* z, double* F, double* descent_dir, SolverOptions* options)
 {
   VariationalInequality* vi_pb = (VariationalInequality*) problem;
   int n = vi_pb->size;
@@ -40,13 +41,15 @@ static void vi_compute_decent_dir_by_avi(void* problem, double* z, double* F, do
 
   vi_pb->compute_nabla_F(vi_pb, n, z, relay_pb->M);
 
-  cblas_dcopy(n, F, 1, relay_pb->q, 1);
-  prodNumericsMatrix(n, n, -1.0, relay_pb->M, z, 1.0, relay_pb->q);
+  cblas_dcopy_msan(n, F, 1, relay_pb->q, 1);
+  NM_gemv(-1.0, relay_pb->M, z, 1.0, relay_pb->q);
 
   int local_info = 0;
   relay_avi_caoferris(relay_pb, descent_dir, F, &local_info, options->internalSolvers);
 
   cblas_daxpy(n, -1.0, z, 1, descent_dir, 1);
+
+  return local_info;
 
 //  avi_caoferris_stage3(avi_options, x, s_vec, problem->size, A,
 //  options->internalSolver);
@@ -67,14 +70,14 @@ void vi_box_AVI_LSA(VariationalInequality* problem, double* z, double* F, int* i
   {
     RelayProblem* relay_pb = (RelayProblem*)malloc(sizeof(RelayProblem));
     relay_pb->size = n;
-    relay_pb->M = createNumericsMatrixFromData(NM_DENSE, n, n, malloc(n * n * sizeof(double)));;
+    relay_pb->M = NM_create_from_data(NM_DENSE, n, n, malloc(n * n * sizeof(double)));;
     relay_pb->q = (double*) malloc(n * sizeof(double));
 
     box_constraints* box = (box_constraints*) problem->set;
     relay_pb->lb = box->lb;
     relay_pb->ub = box->ub;
     vi_box_AVI_LSA_data* sData = (vi_box_AVI_LSA_data*)malloc(sizeof(vi_box_AVI_LSA_data));
-    sData->mat = (NumericsMatrix*)duplicateNumericsMatrix(problem->nabla_F);
+    sData->mat = (NumericsMatrix*)NM_duplicate(problem->nabla_F);
     sData->relay_pb = relay_pb;
     options->solverData = sData;
   }
@@ -105,7 +108,7 @@ void vi_box_AVI_free_solverData(SolverOptions* options)
   assert(options->solverData);
 
   vi_box_AVI_LSA_data* sData = (vi_box_AVI_LSA_data*)options->solverData;
-  freeNumericsMatrix(sData->mat);
+  NM_free(sData->mat);
   free(sData->mat);
   sData->mat = NULL;
   sData->relay_pb->lb = NULL;

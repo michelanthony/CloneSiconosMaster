@@ -21,7 +21,13 @@
 #include <string.h>
 #include <math.h>
 #include <float.h>
+#include "LinearComplementarityProblem.h"
 #include "LCP_Solvers.h"
+#include "lcp_cst.h"
+#include "SolverOptions.h"
+#include "NumericsMatrix.h"
+
+#include "numerics_verbose.h"
 
 void lcp_latin(LinearComplementarityProblem* problem, double *z, double *w, int *info , SolverOptions* options)
 {
@@ -34,7 +40,7 @@ void lcp_latin(LinearComplementarityProblem* problem, double *z, double *w, int 
 
 
   int i, j,  iter1, nrhs;
-  int info2 = 0;
+  lapack_int info2 = 0;
   int itt, it_end;
   int incx, incy;
   int itermax = options->iparam[0];

@@ -18,7 +18,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "FrictionContactProblem.h"
-#include "misc.h"
+#include "NumericsMatrix.h"
+#include <stdio.h>
+#include "numerics_verbose.h"
 
 //#define DEBUG_STDOUT
 //#define DEBUG_MESSAGES
@@ -76,7 +78,7 @@ int frictionContact_printInFile(FrictionContactProblem*  problem, FILE* file)
   fprintf(file, "%d\n", d);
   int nc = problem->numberOfContacts;
   fprintf(file, "%d\n", nc);
-  printInFile(problem->M, file);
+  NM_write_in_file(problem->M, file);
   for (i = 0; i < problem->M->size1; i++)
   {
     fprintf(file, "%32.24e ", problem->q[i]);
@@ -116,11 +118,11 @@ int frictionContact_newFromFile(FrictionContactProblem* problem, FILE* file)
   DEBUG_PRINTF("problem->dimension = %i \n",problem->dimension );
   CHECK_IO(fscanf(file, "%d\n", &nc));
   problem->numberOfContacts = nc;
-  problem->M = newNumericsMatrix();
+  problem->M = NM_new();
 
   /* fix: problem->M->storageType unitialized ! */
 
-  newFromFile(problem->M, file);
+  NM_new_from_file(problem->M, file);
 
   problem->q = (double *) malloc(problem->M->size1 * sizeof(double));
   for (i = 0; i < problem->M->size1; i++)
@@ -157,10 +159,9 @@ int frictionContact_newFromFilename(FrictionContactProblem* problem, char* filen
 void freeFrictionContactProblem(FrictionContactProblem* problem)
 {
   assert(problem);
-
   if (problem->M)
   {
-    freeNumericsMatrix(problem->M);
+    NM_free(problem->M);
     free(problem->M);
     problem->M = NULL;
   }
@@ -179,6 +180,18 @@ void freeFrictionContactProblem(FrictionContactProblem* problem)
 
   free(problem);
 
+}
+
+FrictionContactProblem* newFCP(void)
+{
+  FrictionContactProblem* fcp = (FrictionContactProblem*) malloc(sizeof(FrictionContactProblem));
+  fcp->dimension = 0;
+  fcp->numberOfContacts = 0;
+  fcp->M = NULL;
+  fcp->q = NULL;
+  fcp->mu = NULL;
+
+  return fcp;
 }
 
 FrictionContactProblem* frictionContactProblem_new(int dim, int nc, NumericsMatrix* M, double* q, double* mu)

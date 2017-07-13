@@ -24,6 +24,7 @@
 #include "Model.hpp"
 #include "EulerMoreauOSI.hpp"
 #include "MoreauJeanOSI.hpp"
+#include "MoreauJeanBilbaoOSI.hpp"
 #include "SchatzmanPaoliOSI.hpp"
 #include "NewMarkAlphaOSI.hpp"
 #include "LagrangianDS.hpp"
@@ -32,24 +33,18 @@
 #include "NonSmoothLaw.hpp"
 #include "Simulation.hpp"
 
-#include <NumericsOptions.h>
-
 // #define DEBUG_STDOUT
 // #define DEBUG_MESSAGES
 #include "debug.h"
-
+#include "numerics_verbose.h" // numerics to set verbose mode ...
 
 
 OneStepNSProblem::OneStepNSProblem():
-  _indexSetLevel(0), _inputOutputLevel(0), _maxSize(0), _nbIter(0), _hasBeenUpdated(false)
+  _indexSetLevel(0), _inputOutputLevel(0), _maxSize(0), _hasBeenUpdated(false)
 {
   _numerics_solver_options.reset(new SolverOptions);
   _numerics_solver_options->iWork = NULL;   _numerics_solver_options->callback = NULL;
   _numerics_solver_options->dWork = NULL;
-  // Numerics general options
-  _numerics_options.reset(new NumericsOptions());
-  setDefaultNumericsOptions(&*_numerics_options);
-  _numerics_options->verboseMode = 0; // turn verbose mode to off by default
 }
 // --- CONSTRUCTORS/DESTRUCTOR ---
 
@@ -57,13 +52,8 @@ OneStepNSProblem::OneStepNSProblem():
 // Constructor with given simulation and a pointer on Solver (Warning, solver is an optional argument)
 OneStepNSProblem::OneStepNSProblem(int numericsSolverId):
   _numerics_solver_id(numericsSolverId), _sizeOutput(0),
-  _indexSetLevel(0), _inputOutputLevel(0), _maxSize(0), _nbIter(0), _hasBeenUpdated(false)
+  _indexSetLevel(0), _inputOutputLevel(0), _maxSize(0), _hasBeenUpdated(false)
 {
-
-  // Numerics general options
-  _numerics_options.reset(new NumericsOptions());
-  setDefaultNumericsOptions(&*_numerics_options);
-  _numerics_options->verboseMode = 0; // turn verbose mode to off by default
 
   _numerics_solver_options.reset(new SolverOptions);
   _numerics_solver_options->iWork = NULL;   _numerics_solver_options->callback = NULL;
@@ -74,7 +64,6 @@ OneStepNSProblem::OneStepNSProblem(int numericsSolverId):
 bool OneStepNSProblem::hasInteractions() const
 {
   return _simulation->nonSmoothDynamicalSystem()->topology()->indexSet(_indexSetLevel)->size() > 0 ;
-   //return _simulation->nonSmoothDynamicalSystem()->topology()->indexSet(0)->size() > 0 ;
 }
 
 void OneStepNSProblem::updateInteractionBlocks()
@@ -93,7 +82,7 @@ void OneStepNSProblem::updateInteractionBlocks()
   //  to be computed if interi and interj are in IndexSet1 AND if interi and
   //  interj have common DynamicalSystems.
   //
-  // The possible cases are:
+
   //
   //  - If 1 and 2 are true then it does nothing. 3 is not checked.
   //  - If 1 == true, 2 == false, 3 == false, it does nothing.
@@ -109,7 +98,6 @@ void OneStepNSProblem::updateInteractionBlocks()
   // we put diagonal informations on vertices
   // self loops with bgl are a *nightmare* at the moment
   // (patch 65198 on standard boost install)
-
   if (indexSet->properties().symmetric)
   {
     DEBUG_PRINT("OneStepNSProblem::updateInteractionBlocks(). Symmetric case");
@@ -225,7 +213,6 @@ void OneStepNSProblem::updateInteractionBlocks()
     DEBUG_PRINT("OneStepNSProblem::updateInteractionBlocks(). Non symmetric case\n");
 
     InteractionsGraph::VIterator vi, viend;
-
     for (std11::tie(vi, viend) = indexSet->vertices();
          vi != viend; ++vi)
     {
@@ -408,7 +395,7 @@ void OneStepNSProblem::initialize(SP::Simulation sim)
     _maxSize = simulation()->nonSmoothDynamicalSystem()->topology()->numberOfConstraints();
 }
 
-SP::SimpleMatrix OneStepNSProblem::getOSIMatrix(SP::OneStepIntegrator Osi, SP::DynamicalSystem ds)
+SP::SimpleMatrix OneStepNSProblem::getOSIMatrix(OneStepIntegrator& Osi, SP::DynamicalSystem ds)
 {
   // Connect block to the OSI matrix of a dynamical system for the current simulation.
   // Matrix depends on OSI type.
@@ -416,21 +403,25 @@ SP::SimpleMatrix OneStepNSProblem::getOSIMatrix(SP::OneStepIntegrator Osi, SP::D
   OSI::TYPES osiType; // type of the current one step integrator
   Type::Siconos dsType; // type of the current Dynamical System
 
-  osiType = Osi->getType();
+  osiType = Osi.getType();
   dsType = Type::value(*ds);
 
   if (osiType == OSI::MOREAUJEANOSI
       || osiType == OSI::MOREAUDIRECTPROJECTIONOSI)
   {
-      block = (std11::static_pointer_cast<MoreauJeanOSI> (Osi))->W(ds); // get its W matrix ( pointer link!)
+      block = (static_cast<MoreauJeanOSI&> (Osi)).W(ds); // get its W matrix ( pointer link!)
+  }
+  else if (osiType == OSI::MOREAUJEANBILBAOOSI)
+  {
+    block = (static_cast<MoreauJeanBilbaoOSI&> (Osi)).iteration_matrix(ds); // get its W matrix ( pointer link!)
   }
   else if (osiType == OSI::SCHATZMANPAOLIOSI)
   {
-      block = (std11::static_pointer_cast<SchatzmanPaoliOSI> (Osi))->W(ds); // get its W matrix ( pointer link!)
+      block = (static_cast<SchatzmanPaoliOSI&> (Osi)).W(ds); // get its W matrix ( pointer link!)
   }
   else if (osiType == OSI::EULERMOREAUOSI)
   {
-    block = (std11::static_pointer_cast<EulerMoreauOSI>(Osi))->W(ds); // get its W matrix ( pointer link!)
+    block = (static_cast<EulerMoreauOSI&>(Osi)).W(ds); // get its W matrix ( pointer link!)
   }
   else if (osiType == OSI::LSODAROSI) // Warning: LagrangianDS only at the time !!!
   {
@@ -438,7 +429,7 @@ SP::SimpleMatrix OneStepNSProblem::getOSIMatrix(SP::OneStepIntegrator Osi, SP::D
       RuntimeException::selfThrow("OneStepNSProblem::getOSIMatrix not yet implemented for LsodarOSI Integrator with dynamical system of type " + dsType);
 
     // get lu-factorized mass
-    block = (std11::static_pointer_cast<LagrangianDS>(ds))->workMatrix(LagrangianDS::invMass);
+    block = (std11::static_pointer_cast<LagrangianDS>(ds))->inverseMass();
   }
   else if (osiType == OSI::NEWMARKALPHAOSI)
   {
@@ -447,15 +438,15 @@ SP::SimpleMatrix OneStepNSProblem::getOSIMatrix(SP::OneStepIntegrator Osi, SP::D
       RuntimeException::selfThrow("OneStepNSProblem::getOSIMatrix not yet implemented for NewmarkAlphaOSI Integrator with dynamical system of type " + dsType);
     }
     //
-    SP::OneStepNSProblems  allOSNS  = Osi->simulation()->oneStepNSProblems();
+    SP::OneStepNSProblems  allOSNS  = Osi.simulation()->oneStepNSProblems();
     // If LCP at acceleration level
     if (((*allOSNS)[SICONOS_OSNSP_ED_SMOOTH_ACC]).get() == this)
     {
-      block = (std11::static_pointer_cast<LagrangianDS>(ds))->workMatrix(LagrangianDS::invMass);
+      block = (std11::static_pointer_cast<LagrangianDS>(ds))->inverseMass();
     }
     else // It LCP at position level
     {
-      block = (std11::static_pointer_cast<NewMarkAlphaOSI>(Osi))->W(ds);
+      block = (static_cast<NewMarkAlphaOSI&>(Osi)).W(ds);
     }
   } // End Newmark OSI
   else if (osiType == OSI::D1MINUSLINEAROSI)
@@ -492,9 +483,9 @@ SP::SimpleMatrix OneStepNSProblem::getOSIMatrix(SP::OneStepIntegrator Osi, SP::D
   else if (osiType == OSI::ZOHOSI)
   {
     if (!block)
-      block.reset(new SimpleMatrix((std11::static_pointer_cast<ZeroOrderHoldOSI>(Osi))->Ad(ds)));
+      block.reset(new SimpleMatrix((static_cast<ZeroOrderHoldOSI&>(Osi)).Ad(ds)));
     else
-      *block = (std11::static_pointer_cast<ZeroOrderHoldOSI>(Osi))->Ad(ds);
+      *block = (static_cast<ZeroOrderHoldOSI&>(Osi)).Ad(ds);
   }
   else
     RuntimeException::selfThrow("OneStepNSProblem::getOSIMatrix not yet implemented for Integrator of type " + osiType);
@@ -506,12 +497,7 @@ void OneStepNSProblem::setSolverId(int solverId)
   RuntimeException::selfThrow("OneStepNSProblem::setSolverId - this virtual method should be implemented in all derived classes!");
 }
 
-void OneStepNSProblem::printStat()
-{
-  std::cout << " Number of iterations done: " << _nbIter <<std::endl;
-}
-
 void OneStepNSProblem::setNumericsVerboseMode(bool vMode)
 {
-  _numerics_options->verboseMode = vMode;
+  numerics_set_verbose(vMode);
 }

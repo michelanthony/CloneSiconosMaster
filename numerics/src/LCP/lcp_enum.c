@@ -22,9 +22,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "LinearComplementarityProblem.h"
 #include "LCP_Solvers.h"
+#include "lcp_cst.h"
+#include "SolverOptions.h"
+#include "NumericsMatrix.h"
+
 #include "SiconosLapack.h"
 #include "lcp_enum.h"
+#include "numerics_verbose.h"
+
 static unsigned long  int sCurrentEnum = 0;
 static unsigned long  int sCmpEnum = 0;
 static unsigned long  int sNbCase = 0;
@@ -189,9 +196,9 @@ void lcp_enum(LinearComplementarityProblem* problem, double *z, double *w, int *
   int lin;
   sSize = (problem->size);
   int NRHS = 1;
-  int * ipiv;
+  lapack_int * ipiv;
   int check;
-  int LAinfo = 0;
+  lapack_int LAinfo = 0;
   int useDGELS = options->iparam[4];
 
   /*OUTPUT param*/

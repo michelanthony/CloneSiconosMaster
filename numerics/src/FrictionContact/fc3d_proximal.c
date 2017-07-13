@@ -27,6 +27,7 @@
 //#define DEBUG_MESSAGES */
 #include "debug.h"
 #include <math.h>
+#include "numerics_verbose.h"
 
 void fc3d_proximal(FrictionContactProblem* problem, double *reaction, double *velocity, int* info, SolverOptions* options)
 {
@@ -45,14 +46,14 @@ void fc3d_proximal(FrictionContactProblem* problem, double *reaction, double *ve
   int itermax = iparam[0];
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+  double norm_q = cblas_dnrm2(nc*3 , problem->q , 1);
   if (verbose > 0){
     solver_options_print(options);
   }
 
   if (options->numberOfInternalSolvers < 1)
   {
-    numericsError("fc3d_proximal", "The PROX method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
+    numerics_error("fc3d_proximal", "The PROX method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
   }
   SolverOptions *internalsolver_options = options->internalSolvers;
 
@@ -107,7 +108,7 @@ void fc3d_proximal(FrictionContactProblem* problem, double *reaction, double *ve
       /* parameters to set the value of alpha */
       sigma = options->dparam[4];
       nu = options->dparam[5];
-      fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq,  &error);
+      fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q,  &error);
       internalsolver_options->dparam[0] = options->dparam[0];
       internalsolver_options->dparam[0] = error;
       alpha = sigma*pow(error,nu);
@@ -160,7 +161,7 @@ void fc3d_proximal(FrictionContactProblem* problem, double *reaction, double *ve
   }
   else
   {
-    numericsError("fc3d_proximal", "The PROX method needs options for the internal solvers, soptions->internalSolvers should be diffrent from NULL");
+    numerics_error("fc3d_proximal", "The PROX method needs options for the internal solvers, soptions->internalSolvers should be diffrent from NULL");
   }
 
 
@@ -184,33 +185,27 @@ void fc3d_proximal(FrictionContactProblem* problem, double *reaction, double *ve
       printf("------------------------ FC3D - PROXIMAL - Only regularization \n");
   }
 
-  if (iparam[9]){
-    double alpha_old;
+  if (iparam[9])
+  {
+    double alpha_old = alpha;
     while ((iter < itermax) && (hasNotConverged > 0))
     {
       ++iter;
       //Add proximal regularization on M
-      if (M->storageType == 0)
+      //This code looked weird before. Do we add (alpha - alpha_old) ?
+      double pert = alpha;
+      if (iter > 0)
       {
-        for (int i = 0 ; i < n ; i++) M->matrix0[i + i * n] += alpha;
+        pert -= alpha_old;
       }
-      else if (M->storageType == 1)
-      {
-        for (int ic = 0 ; ic < nc ; ic++)
-        {
-          int diagPos = getDiagonalBlockPos(M->matrix1, ic);
-          if (iter >0 )
-            for (int i = 0 ; i < 3 ; i++) M->matrix1->block[diagPos][i + 3 * i] -= alpha_old ;
-          for (int i = 0 ; i < 3 ; i++) M->matrix1->block[diagPos][i + 3 * i] += alpha ;
-        }
-      }
+      NM_add_to_diag3(M, pert);
 
       DEBUG_PRINTF("internal solver tolerance = %21.8e \n",internalsolver_options->dparam[0]);
 
       (*internalsolver)(problem, reaction , velocity , info , internalsolver_options);
 
       /* **** Criterium convergence **** */
-      fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq, &error);
+      fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q, &error);
 
       int iter_internalsolver = internalsolver_options->iparam[iter_iparam];
       options->iparam[6] +=iter_internalsolver;
@@ -250,18 +245,8 @@ void fc3d_proximal(FrictionContactProblem* problem, double *reaction, double *ve
       cblas_daxpy(n, -alpha, reactionold, 1, problem->q , 1) ;
 
       //Add proximal regularization on M
-      if (M->storageType == 0)
-      {
-        for (int i = 0 ; i < n ; i++) M->matrix0[i + i * n] += alpha;
-      }
-      else if (M->storageType == 1)
-      {
-        for (int ic = 0 ; ic < nc ; ic++)
-        {
-          int diagPos = getDiagonalBlockPos(M->matrix1, ic);
-          for (int i = 0 ; i < 3 ; i++) M->matrix1->block[diagPos][i + 3 * i] += alpha ;
-        }
-      }
+      NM_add_to_diag3(M, alpha);
+
       // internal solver for the regularized problem
       /*       fc3d_nsgs(problem, reaction , velocity , info , internalsolver_options); */
 
@@ -279,20 +264,9 @@ void fc3d_proximal(FrictionContactProblem* problem, double *reaction, double *ve
       cblas_daxpy(n, alpha, reactionold, 1, problem->q, 1) ;
 
       //substract proximal regularization on M
-      if (M->storageType == 0)
-      {
-        for (int i = 0 ; i < n ; i++) M->matrix0[i + i * n] -= alpha;
-      }
-      else if (M->storageType == 1)
-      {
-        for (int ic = 0 ; ic < nc ; ic++)
-        {
-          int diagPos = getDiagonalBlockPos(M->matrix1, ic);
-          for (int i = 0 ; i < 3 ; i++) M->matrix1->block[diagPos][i + 3 * i] -= alpha ;
-        }
-      }
+      NM_add_to_diag3(M, -alpha);
 
-      fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq, &error);
+      fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q, &error);
       //update the alpha with respect to the number of internal iterations.
 
       int iter_internalsolver = internalsolver_options->iparam[iter_iparam];

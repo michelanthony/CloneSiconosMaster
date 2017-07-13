@@ -27,11 +27,11 @@
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 
 #include "fc3d_Solvers.h"
-#include "NumericsOptions.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include "SiconosBlas.h"
+#include "numerics_verbose.h"
 
 /*Static variables */
 
@@ -180,12 +180,12 @@ void NCPGlocker_fillMLocal(FrictionContactProblem * problem, FrictionContactProb
   }
   else if (storageType == 1)
   {
-    int diagPos = getDiagonalBlockPos(MGlobal->matrix1, contact);
+    int diagPos = SBM_get_position_diagonal_block(MGlobal->matrix1, contact);
     localproblem->M->matrix0 = MGlobal->matrix1->block[diagPos];
     /*     cblas_dcopy(9, MGlobal->matrix1->block[diagPos], 1,localproblem->M->matrix0 , 1); */
   }
   else
-    numericsError("fc3d2NCP_Glocker::NCPGlocker_fillMLocal() -", "unknown storage type for matrix M");
+    numerics_error("fc3d2NCP_Glocker::NCPGlocker_fillMLocal() -", "unknown storage type for matrix M");
 
 }
 

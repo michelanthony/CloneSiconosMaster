@@ -1,3 +1,22 @@
+/* Siconos, Copyright INRIA 2005-2016.
+ * Siconos is a program dedicated to modeling, simulation and control
+ * of non smooth dynamical systems.
+ * Siconos is a free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ * Siconos is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Siconos; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ * Contact: Vincent ACARY, siconos-team@lists.gforge.inria.fr
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -7,6 +26,10 @@
 
 #include "SiconosCompat.h"
 
+#if defined(__cplusplus)
+#undef restrict
+#define restrict __restrict
+#endif
 //#define VERBOSE_DEBUG
 
 /* add an entry to triplet matrix only if value is not (nearly) null */
@@ -83,6 +106,10 @@ int cs_check_triplet(CSparseMatrix *T)
   csi* Ti = T->i;
   csi* Tp = T->p;
   int info = 0;
+  csi cc = 0;
+  csi max_row = -1;
+  csi max_col = -1;
+
   for (csi indx = 0; indx < T->nz; ++indx)
   {
     if (Ti[indx] >= nb_row)
@@ -94,6 +121,68 @@ int cs_check_triplet(CSparseMatrix *T)
     {
       printf("cs_check_triplet :: matrix element " SN_PTRDIFF_T_F " has a row number " SN_PTRDIFF_T_F " > " SN_PTRDIFF_T_F " the number of rows\n", indx, Tp[indx], nb_col);
       info = 1;
+    }
+    if (Tp[indx] < max_col)
+    {
+       printf("cs_check_csc :: " SN_PTRDIFF_T_F " at index " SN_PTRDIFF_T_F " > " SN_PTRDIFF_T_F "\n", Tp[indx], indx, max_col);
+    }
+    if (Tp[indx] == cc)
+    {
+      if (Ti[indx] <= max_row)
+      {
+        printf("cs_check_triplet :: matrix element at column " SN_PTRDIFF_T_F " has a row number " SN_PTRDIFF_T_F "  > " SN_PTRDIFF_T_F " the max on that column\n", cc, Ti[indx], max_row);
+      }
+      else
+      {
+        max_row = Ti[indx];
+      }
+    }
+    else
+    {
+      cc = Tp[indx];
+      max_row = -1;
+    }
+  }
+  return info;
+}
+
+int cs_check_csc(CSparseMatrix *T)
+{
+  if (T->nz != -1)
+  {
+    fprintf(stderr, "cs_check_csc :: given CSparseMatrix is not in a csc form: nz = " SN_PTRDIFF_T_F "\n", T->nz);
+    return 1;
+  }
+
+  csi nb_row = T->m;
+  csi nb_col = T->n;
+  csi* Ti = T->i;
+  csi* Tp = T->p;
+  int info = 0;
+
+  for (size_t j = 0; j < nb_col; ++j)
+  {
+    csi max_indx = -1;
+    if (Tp[j] > Tp[j+1])
+    {
+       printf("cs_check_csc :: " SN_PTRDIFF_T_F " at index " SN_PTRDIFF_T_F " smaller than " SN_PTRDIFF_T_F "\n", Tp[j+1], j, Tp[j]);
+    }
+    for (size_t p = Tp[j]; p < Tp[j+1]; ++p)
+    {
+      if (Ti[p] <= max_indx)
+      {
+        printf("cs_check_csc :: matrix element ("SN_PTRDIFF_T_F","SN_PTRDIFF_T_F") at index " SN_PTRDIFF_T_F " has a row number < " SN_PTRDIFF_T_F " the previous max\n", Ti[p], j, p, max_indx);
+        info = 1;
+      }
+      else if (Ti[p] >= nb_row)
+      {
+        printf("cs_check_csc :: matrix element ("SN_PTRDIFF_T_F","SN_PTRDIFF_T_F") at index " SN_PTRDIFF_T_F " has a row number > " SN_PTRDIFF_T_F " the max\n", Ti[p], j, p, nb_row);
+        info = 1;
+      }
+      else
+      {
+        max_indx = Ti[p];
+      }
     }
   }
   return info;
@@ -140,8 +229,8 @@ double* cs_dense(CSparseMatrix *A)
 }
 
 /* y = alpha*A*x+beta*y */
-int cs_aaxpy(const double alpha, const cs *A, const double *x,
-             const double beta, double *y)
+int cs_aaxpy(const double alpha, const cs *A, const double * restrict x,
+             const double beta, double * restrict y)
 {
   csi p, n, *Ap, *Ai ;
   int j;
@@ -174,3 +263,59 @@ CSparseMatrix* cs_spfree_on_stack(CSparseMatrix* A)
   A->x = NULL;
   return NULL;
 }
+
+int cs_printInFile(const cs *A, int brief, FILE* file)
+{
+  csi m, n, nzmax, nz, p, j, *Ap, *Ai ;
+  double *Ax ;
+  if(!A)
+  {
+    fprintf(file,"(null)\n") ;
+    return (0) ;
+  }
+  m = A->m ;
+  n = A->n ;
+  Ap = A->p ;
+  Ai = A->i ;
+  Ax = A->x ;
+  nzmax = A->nzmax ;
+  nz = A->nz ;
+  fprintf(file,"CSparse Version %d.%d.%d, %s.  %s\n", CS_VER, CS_SUBVER,
+         CS_SUBSUB, CS_DATE, CS_COPYRIGHT) ;
+  if(nz < 0)
+  {
+    fprintf(file,"%lld-by-%lld, nzmax: %lld nnz: %lld, 1-norm: %g\n",
+            (long long int)m,  (long long int)n,  (long long int)nzmax,
+            (long long int)Ap [n],  cs_norm(A)) ;
+    for(j = 0 ; j < n ; j++)
+    {
+      fprintf(file,"    col %lld : locations %lld to %lld\n",  (long long int)j,  (long long int)Ap [j],  (long long int)Ap [j+1]-1);
+      for(p = Ap [j] ; p < Ap [j+1] ; p++)
+      {
+        fprintf(file,"      %lld : %g\n",  (long long int)Ai [p], Ax ? Ax [p] : 1) ;
+        if(brief && p > 20)
+        {
+          fprintf(file,"  ...\n") ;
+          return (1) ;
+        }
+      }
+    }
+  }
+  else
+  {
+    fprintf(file,"triplet: %lld-by-%lld, nzmax: %lld nnz: %lld\n",  (long long int)m,  (long long int)n,
+            (long long int)nzmax,  (long long int)nz) ;
+    for(p = 0 ; p < nz ; p++)
+    {
+      fprintf(file,"    %lld %lld : %g\n",  (long long int)Ai [p],  (long long int)Ap [p], Ax ? Ax [p] : 1) ;
+      if(brief && p > 20)
+      {
+        fprintf(file,"  ...\n") ;
+        return (1) ;
+      }
+    }
+  }
+  return (1) ;
+}
+
+

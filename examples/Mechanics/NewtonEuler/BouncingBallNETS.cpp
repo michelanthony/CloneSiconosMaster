@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
 
     // Version with my_NewtonEulerR()
     SP::NewtonEulerR relation0(new my_NewtonEulerR(radius));
-    SP::Interaction inter(new Interaction(nslawsize, nslaw0, relation0));
+    SP::Interaction inter(new Interaction(nslaw0, relation0));
 
     // -------------
     // --- Model ---
@@ -242,7 +242,7 @@ int main(int argc, char* argv[])
     SimpleMatrix dataPlot(N + 1, outputSize);
 
     SP::SiconosVector q = ball->q();
-    SP::SiconosVector v = ball->velocity();
+    SP::SiconosVector v = ball->twist();
     SP::SiconosVector p = ball->p(1);
     SP::SiconosVector lambda = inter->lambda(1);
 

@@ -109,6 +109,8 @@ private:
 
 
 public:
+  
+  enum {OSNSP_RHS,WORK_INTERACTION_LENGTH};
 
   /** constructor from a minimum set of data
    */
@@ -250,7 +252,30 @@ public:
   /** initialization of the integrator
    */
   void initialize(Model& m);
+  /** initialization of the work vectors and matrices (properties) related to
+   *  one dynamical system on the graph and needed by the osi
+   * \param m the Model
+   * \param t time of initialization
+   * \param ds the dynamical system
+   */
+  void initializeDynamicalSystem(Model& m, double t, SP::DynamicalSystem ds);
 
+  /** initialization of the work vectors and matrices (properties) related to
+   *  one interaction on the graph and needed by the osi
+   * \param inter the interaction
+   * \param interProp the properties on the graph
+   * \param DSG the dynamical systems graph
+   */
+  void fillDSLinks(Interaction &inter,
+		     InteractionProperties& interProp,
+		     DynamicalSystemsGraph & DSG);
+
+  /** get the number of index sets required for the simulation
+   * \return unsigned int
+   */
+  unsigned int numberOfIndexSets() const {return 3;};
+
+  
   /** integrate the system, between tinit and tend (->iout=true), with possible stop at tout (->iout=false)
    *  \param tinit initial time
    *  \param tend end time

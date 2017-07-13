@@ -38,12 +38,12 @@
 #include "ncp_newton_FBLSA.h"
 
 #include "SiconosCompat.h"
-
+#include "lcp_cst.h"
 //#define DEBUG_STDOUT
 //#define DEBUG_MESSAGES
 #include "debug.h"
 
-void ncp_pathsearch(NCP_struct* problem, double* z, double* F, int *info , SolverOptions* options)
+void ncp_pathsearch(NonlinearComplementarityProblem* problem, double* z, double* F, int *info , SolverOptions* options)
 {
 /* Main step of the algorithm:
  * - compute jacobians
@@ -54,7 +54,7 @@ void ncp_pathsearch(NCP_struct* problem, double* z, double* F, int *info , Solve
   unsigned int preAlloc = options->iparam[SICONOS_IPARAM_PREALLOC];
   int itermax = options->iparam[SICONOS_IPARAM_MAX_ITER];
 
-  double merit_norm = 1.0;
+  DEBUG_EXPR(double merit_norm = 1.0;);
   double nn_tol = options->dparam[SICONOS_DPARAM_TOL];
   int nbiter = 0;
 
@@ -134,6 +134,10 @@ void ncp_pathsearch(NCP_struct* problem, double* z, double* F, int *info , Solve
     data_NMS->ls_data->data = (void*)problem;
     data_NMS->ls_data->set = data_NMS->set;
     data_NMS->ls_data->sigma = options->dparam[SICONOS_DPARAM_NMS_SIGMA];
+    armijo_extra_params* pG = (armijo_extra_params*)malloc(sizeof(armijo_extra_params));
+    data_NMS->ls_data->extra_params = (void*) pG;
+    search_Armijo_params_init(pG);
+    pG->gamma = 1.;
     /* data_NMS->ls_data->searchtype is set in the NMS code */
   }
   else
@@ -185,7 +189,7 @@ void ncp_pathsearch(NCP_struct* problem, double* z, double* F, int *info , Solve
       lcp_subproblem_check.M = problem->nabla_F;
       lcp_subproblem_check.q = lcp_subproblem.q;
       //cblas_dcopy(n, x, 1, lcp_subproblem_check.q , 1);
-      //prodNumericsMatrix(n, n, -1.0, problem->nabla_F, x_plus, 0.0, lcp_subproblem.q);
+      //NM_gemv(-1.0, problem->nabla_F, x_plus, 0.0, lcp_subproblem.q);
     }
 
     double norm_r2 = cblas_ddot(n, r, 1, r, 1);
@@ -352,8 +356,7 @@ void ncp_pathsearch(NCP_struct* problem, double* z, double* F, int *info , Solve
     functions->compute_F_merit(problem, z, F, data_NMS->ls_data->F_merit);
 
     /* XXX is this correct ? */
-    merit_norm = .5 * cblas_ddot(n, data_NMS->ls_data->F_merit, 1, data_NMS->ls_data->F_merit, 1);
-
+    DEBUG_EXPR(merit_norm = .5 * cblas_ddot(n, data_NMS->ls_data->F_merit, 1, data_NMS->ls_data->F_merit, 1););
     ncp_compute_error(n, z, F, nn_tol, &err); /* XXX F should be up-to-date, we should check only CC*/
     DEBUG_PRINTF("ncp_pathsearch :: iter = %d, ncp_error = %e; merit_norm^2 = %e\n", nbiter, err, merit_norm);
 
@@ -378,7 +381,7 @@ void ncp_pathsearch(NCP_struct* problem, double* z, double* F, int *info , Solve
 
   if (!preAlloc)
   {
-    freeNumericsMatrix(problem->nabla_F);
+    NM_free(problem->nabla_F);
     free(problem->nabla_F);
     problem->nabla_F = NULL;
     free(options->dWork);

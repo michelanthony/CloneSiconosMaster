@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include "numerics_verbose.h"
 
 /* #define DEBUG_STDOUT */
 /* #define DEBUG_MESSAGES */
@@ -44,7 +45,7 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
   int itermax = iparam[0];
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+  double norm_q = cblas_dnrm2(nc*3 , problem->q , 1);
 
 
 
@@ -57,31 +58,31 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
   int nLocal = 3;
   dparam[0] = dparam[2]; // set the tolerance for the local solver
 
-  
-  double * velocitytmp = (double *)malloc(n * sizeof(double));
-  double * reactiontmp = (double *)malloc(n * sizeof(double));
+
+  double * velocitytmp = (double *)calloc(n,sizeof(double));
+  double * reactiontmp = (double *)calloc(n,sizeof(double));
 
   double rho = 0.0, rho_k =0.0;
   int isVariable = 0;
 
   if (dparam[3] > 0.0)
-  {    
+  {
     rho = dparam[3];
     if (verbose > 0)
     {
-      printf("----------------------------------- FC3D - Extra Gradient (EG) - Fixed stepsize with  rho = %14.7e \n", rho); 
+      printf("----------------------------------- FC3D - Extra Gradient (EG) - Fixed stepsize with  rho = %14.7e \n", rho);
     }
   }
   else
   {
     /* Variable step in iterations*/
-    isVariable = 1;  
+    isVariable = 1;
     rho = -dparam[3];
     if (verbose > 0)
     {
       printf("----------------------------------- FC3D - Extra Gradient (EG) - Variable stepsize with starting rho = %14.7e \n", rho);
     }
-     
+
   }
 
   double alpha = 1.0;
@@ -99,8 +100,8 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
 
   if (isVariable)
   {
-    reaction_k = (double *)malloc(n * sizeof(double));
-    velocity_k = (double *)malloc(n * sizeof(double));
+    reaction_k = (double *)calloc(n,sizeof(double));
+    velocity_k = (double *)calloc(n,sizeof(double));
   }
 
   if (!isVariable)
@@ -117,7 +118,7 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
       cblas_dcopy(n , q , 1 , velocitytmp, 1);
 
 
-      prodNumericsMatrix(n, n, alpha, M, reactiontmp, beta, velocitytmp);
+      NM_gemv(alpha, M, reactiontmp, beta, velocitytmp);
       // projection for each contact
       for (contact = 0 ; contact < nc ; ++contact)
       {
@@ -129,7 +130,7 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
         projectionOnCone(&reactiontmp[pos], mu[contact]);
       }
       cblas_dcopy(n , q , 1 , velocitytmp, 1);
-      prodNumericsMatrix(n, n, alpha, M, reactiontmp, beta, velocitytmp);
+      NM_gemv(alpha, M, reactiontmp, beta, velocitytmp);
       // projection for each contact
       for (contact = 0 ; contact < nc ; ++contact)
       {
@@ -142,12 +143,12 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
       }
 
       /* **** Criterium convergence **** */
-      fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq, &error);
+      fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q, &error);
 
       if (options->callback)
       {
-        options->callback->collectStatsIteration(options->callback->env, nc * 3, 
-                                        reaction, velocity, 
+        options->callback->collectStatsIteration(options->callback->env, nc * 3,
+                                        reaction, velocity,
                                         error, NULL);
       }
 
@@ -177,7 +178,7 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
 
       /* velocity_k <- q + M * reaction_k  */
       beta = 1.0;
-      prodNumericsMatrix(n, n, alpha, M, reaction_k, beta, velocity_k);
+      NM_gemv(alpha, M, reaction_k, beta, velocity_k);
 
       ls_iter = 0 ;
       success =0;
@@ -206,7 +207,7 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
         /* velocity <- q + M * reaction  */
         beta = 1.0;
         cblas_dcopy(n , q , 1 , velocity, 1);
-        prodNumericsMatrix(n, n, alpha, M, reaction, beta, velocity);
+        NM_gemv(alpha, M, reaction, beta, velocity);
 
 
         /* velocitytmp <- velocity */
@@ -260,7 +261,7 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
       }
       /* velocitytmp <- M* reaction* q  */
       cblas_dcopy(n , q , 1 , velocitytmp, 1);
-      prodNumericsMatrix(n, n, alpha, M, reaction, beta, velocitytmp);
+      NM_gemv(alpha, M, reaction, beta, velocitytmp);
 
       // projection for each contact
       for (contact = 0 ; contact < nc ; ++contact)
@@ -283,7 +284,7 @@ void fc3d_ExtraGradient(FrictionContactProblem* problem, double *reaction, doubl
         );
 
       /* **** Criterium convergence **** */
-      fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq, &error);
+      fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q, &error);
       DEBUG_PRINTF("error = %12.8e\t error_k = %12.8e\n",error,error_k);
       /*Update rho*/
       if ((rho_k*a1 < Lmin * a2) && (error < error_k))

@@ -1,7 +1,4 @@
 #include "OccContactShape.hpp"
-#include "ContactShapeDistance.hpp"
-#include "cadmbtb.hpp"
-#include "Geometer.hpp"
 
 #include <RuntimeException.hpp>
 
@@ -11,12 +8,15 @@
 #include <TopExp_Explorer.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Face.hxx>
-#include <gp_Quaternion.hxx>
-
+#include <gp_Vec.hxx>
+#include <gp_Lin.hxx>
+#include <gp_Ax3.hxx>
 #include <limits>
 
 //#define DEBUG_MESSAGES 1
 #include <debug.h>
+
+#include <boost/math/quaternion.hpp>
 
 OccContactShape::OccContactShape() : _shape(new TopoDS_Shape())
 {
@@ -42,37 +42,6 @@ void OccContactShape::computeUVBounds()
     );
 }
 
-
-SP::ContactShapeDistance OccContactShape::distance(
-  const OccContactShape& sh2, bool normalFromFace1) const
-{
-  Geometer geometer(*this);
-  sh2.accept(geometer);
-
-  return geometer.answer;
-
-}
-
-SP::ContactShapeDistance OccContactShape::distance(
-  const OccContactFace& sh2, bool normalFromFace1) const
-{
-  RuntimeException::selfThrow(
-    "OccContactShape::distance() : cannot compute distance to this contact face"
-    );
-  return SP::ContactShapeDistance();
-}
-
-SP::ContactShapeDistance OccContactShape::distance(
-  const OccContactEdge& sh2, bool normalFromFace1) const
-{
-  RuntimeException::selfThrow(
-    "OccContactShape::distance() : cannot compute distance to this contact edge"
-    );
-
-  return SP::ContactShapeDistance();
-}
-
-
 std::string OccContactShape::exportBRepToString() const
 {
   std::stringstream out;
@@ -91,6 +60,7 @@ void OccContactShape::importBRepFromString(const std::string& brepstr)
 
   BRepTools::Read(this->data(), in, brep_builder);
 
+  this->computeUVBounds();
 }
 
 #include <SiconosVector.hpp>
@@ -133,31 +103,6 @@ SPC::TopoDS_Edge OccContactShape::edge(unsigned int index) const
   }
 
   return return_value;
-}
-
-
-void OccContactShape::move(const SiconosVector& q)
-{
-
-  const gp_Vec translat = gp_Vec(q(0), q(1), q(2));
-
-  const gp_Quaternion rota = gp_Quaternion(q(4), q(5), q(6), q(3));
-
-  gp_Trsf transfo;
-
-  transfo.SetRotation(rota);
-  transfo.SetTranslationPart(translat);
-
-  // this->data().Move(transfo);
-  this->data().Location(TopLoc_Location(transfo));
-
-  // cf code from Olivier
-  // reset Location to avoid accumulation of TopLoc_Datum3D
-//  const TopLoc_Location& aLoc = this->data().Location();
-//  const gp_Trsf& T = aLoc.Transformation();
-//  TopLoc_Location aLocWithoutList(T);
-//  this->data().Location(aLocWithoutList);
-
 }
 
 

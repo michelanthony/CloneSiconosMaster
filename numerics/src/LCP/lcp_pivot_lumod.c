@@ -24,10 +24,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
+#include "LinearComplementarityProblem.h"
 #include "LCP_Solvers.h"
+#include "lcp_cst.h"
+#include "SolverOptions.h"
+#include "NumericsMatrix.h"
+
 #include "pivot-utils.h"
 #include "lumod_wrapper.h"
-
+#include "numerics_verbose.h"
 #include "SiconosLapack.h"
 
 //#define DEBUG_STDOUT
@@ -87,7 +92,7 @@ void lcp_pivot_lumod_covering_vector(LinearComplementarityProblem* problem, doub
 
   unsigned int dim = problem->size;
   assert(dim>0);
-  unsigned int dim2;
+  /* unsigned int dim2; */
   /* size of the LCP */
   DEBUG_EXPR_WE( DEBUG_PRINT("matrix M: ") NM_display(problem->M); DEBUG_PRINT("vector q: ")
       for(unsigned i = 0; i < dim; ++i) {printf("%e ", problem->q[i]);} printf("\n");
@@ -149,19 +154,19 @@ void lcp_pivot_lumod_covering_vector(LinearComplementarityProblem* problem, doub
   /* Allocation */
   SN_lumod_dense_data* lumod_data = SN_lumod_dense_allocate(dim, maxmod);
 
-  switch (pivot_selection_rule)
-  {
-/*     case SICONOS_LCP_PIVOT_BARD:
-      dim2 = 2*dim + 1;
-      break;
-    case SICONOS_LCP_PIVOT_LEAST_INDEX:
-      dim2 = dim + 1;
-      break;*/
-    case SICONOS_LCP_PIVOT_LEMKE:
-    case SICONOS_LCP_PIVOT_PATHSEARCH:
-    default:
-      dim2 = 2 * (dim + 1);
-  }
+/*   switch (pivot_selection_rule) */
+/*   { */
+/* /\*     case SICONOS_LCP_PIVOT_BARD: */
+/*       dim2 = 2*dim + 1; */
+/*       break; */
+/*     case SICONOS_LCP_PIVOT_LEAST_INDEX: */
+/*       dim2 = dim + 1; */
+/*       break;*\/ */
+/*     case SICONOS_LCP_PIVOT_LEMKE: */
+/*     case SICONOS_LCP_PIVOT_PATHSEARCH: */
+/*     default: */
+/*       dim2 = 2 * (dim + 1); */
+/*   } */
 
 
   /* Init basis if necessary */

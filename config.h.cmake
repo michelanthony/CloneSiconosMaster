@@ -7,12 +7,20 @@
 #cmakedefine HAVE_SICONOS_MECHANICS
 #cmakedefine HAVE_SICONOS_CONTROL
 #cmakedefine HAVE_PATHFERRIS
+#cmakedefine HAVE_PATHVI
 #cmakedefine HAVE_MLCPSIMPLEX
 #cmakedefine HAVE_TIME_H
 #cmakedefine HAVE_SYSTIMES_H
 #cmakedefine HAVE_MPI
 #cmakedefine WITH_MUMPS
 #cmakedefine WITH_UMFPACK
+#cmakedefine WITH_SUPERLU
+#cmakedefine WITH_SUPERLU_MT
+#cmakedefine WITH_SUPERLU_dist
+#cmakedefine WITH_MKL_PARDISO
+#cmakedefine WITH_MKL_SPBLAS
+#cmakedefine SICONOS_MKL_32
+#cmakedefine SICONOS_MKL_64
 #cmakedefine WITH_TIMERS
 #cmakedefine DUMP_PROBLEM
 #cmakedefine WITH_FCLIB
@@ -31,7 +39,7 @@
 // Is cblas available? 
 #cmakedefine HAS_CBLAS
 
-// Where does it comes from? 
+// Where does cblas comes from? 
 #cmakedefine HAS_MKL_CBLAS
 #cmakedefine HAS_ACCELERATE // includes also lapack from Accelerate
 #cmakedefine HAS_ATLAS_CBLAS 
@@ -41,6 +49,7 @@
 // Which Lapack? 
 #cmakedefine HAS_MKL_LAPACKE
 #cmakedefine HAS_ATLAS_LAPACK
+#cmakedefine HAS_MATLAB_LAPACK
 #cmakedefine HAS_LAPACKE // lapacke.h has been found
 #cmakedefine HAS_CLAPACK  // clapack.h has been found
 #cmakedefine HAS_OpenBLAS_LAPACK

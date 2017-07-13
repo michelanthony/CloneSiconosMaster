@@ -21,54 +21,42 @@
 #include <time.h>
 #include <float.h>
 #include <math.h>
-
-#include "NumericsOptions.h"
+#include <assert.h>
 #include "VariationalInequality_Solvers.h"
 #include "VariationalInequality_computeError.h"
 
 #include "NonSmoothDrivers.h"
 #include "SiconosBlas.h"
 #include "SiconosSets.h"
+#include "numerics_verbose.h"
 
-char *  SICONOS_VI_EG_STR = "VI_EG";
-char *  SICONOS_VI_FPP_STR = "VI_FPP";
-char *  SICONOS_VI_HP_STR = "VI_HP";
-char *  SICONOS_VI_BOX_QI_STR = "Box VI solver based on Qi C-function";
-char *  SICONOS_VI_BOX_AVI_LSA_STR = "Box VI solver based on the Newton-Josephy method";
-char *  SICONOS_VI_BOX_PATH_STR = "Box VI solver based on PATH solver";
+const char* const   SICONOS_VI_EG_STR = "VI_EG";
+const char* const   SICONOS_VI_FPP_STR = "VI_FPP";
+const char* const   SICONOS_VI_HP_STR = "VI_HP";
+const char* const   SICONOS_VI_BOX_QI_STR = "Box VI solver based on Qi C-function";
+const char* const   SICONOS_VI_BOX_AVI_LSA_STR = "Box VI solver based on the Newton-Josephy method";
+const char* const   SICONOS_VI_BOX_PATH_STR = "Box VI solver based on PATH solver";
 
 /* #define DEBUG_MESSAGES */
 /* #define DEBUT_STDOUT */
 #include "debug.h"
 
 
-void snPrintf(int level, SolverOptions* opts, const char *fmt, ...);
+
 
 int variationalInequality_driver(VariationalInequality* problem, 
                                  double *x, double *w, 
-                                 SolverOptions* options, 
-                                 NumericsOptions* global_options)
+                                 SolverOptions* options)
 {
   if (options == NULL)
-    numericsError("variationalInequality_driver", "null input for solver and/or global options");
-  /* Set global options */
-  if (global_options)
-  {
-    setNumericsOptions(global_options);
-    options->numericsOptions = global_options;
-  }
+    numerics_error("variationalInequality_driver", "null input for solver and/or global options");
 
-  /* If the options for solver have not been set, read default values in .opt file */
-  int NoDefaultOptions = options->isSet; /* true(1) if the SolverOptions structure has been filled in else false(0) */
-
-  if (!NoDefaultOptions)
-    solver_options_read(3, options);
-
+  assert(options->isSet);
   if (verbose > 0)
     solver_options_print(options);
 
   /* Solver name */
-  /*char * name = options->solverName;*/
+  /*const char* const  name = options->solverName;*/
 
   int info = -1 ;
 
@@ -87,21 +75,21 @@ int variationalInequality_driver(VariationalInequality* problem,
   /* Extra Gradient algorithm */
   case SICONOS_VI_EG:
   {
-    snPrintf(1, options, 
+    numerics_printf_verbose(1,
              " ========================== Call ExtraGradient (EG) solver for VI problem ==========================\n");
     variationalInequality_ExtraGradient(problem, x , w , &info , options);
     break;
   }
   case SICONOS_VI_FPP:
   {
-    snPrintf(1, options, 
+    numerics_printf_verbose(1,
              " ========================== Call Fixed Point Projection (FPP) solver for VI problem ==========================\n");
     variationalInequality_FixedPointProjection(problem, x , w , &info , options);
     break;
   }
   case SICONOS_VI_HP:
   {
-    snPrintf(1, options, 
+    numerics_printf_verbose(1,
              " ========================== Call Hyperplane Projection (HP) solver for VI problem ==========================\n");
     variationalInequality_HyperplaneProjection(problem, x , w , &info , options);
     break;

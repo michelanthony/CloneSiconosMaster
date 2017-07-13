@@ -26,6 +26,9 @@
 #include "SiconosVectorFriends.hpp"
 #include "SiconosVectorException.hpp"
 
+struct SiconosVectorIterator;
+struct SiconosVectorConstIterator;
+
 /** Union of DenseVect and SparseVect pointers -
     Siconos::DENSE, num = 1,
     SPARSE, num = 4
@@ -108,12 +111,16 @@ public:
 
   /** constructor with an input file
    *  \param filename a std::string which contain the file path
-   *  \param b a boolean to indicate if the file is in ascii
+   *  \param is_ascii a boolean to indicate if the file is in ascii
    */
-  SiconosVector(const std::string& filename, bool b = true);
+  SiconosVector(const std::string& filename, bool is_ascii);
 
+  /** constructor for the concatenation of two vectors
+   * \param v1 the first vector
+   * \param v2 the second vector
+   */
   SiconosVector(const SiconosVector& v1, const SiconosVector& v2);
-  
+
   /** destructor
    */
   ~SiconosVector();
@@ -193,7 +200,7 @@ public:
    *  \return a double
    */
   double norm2() const ;
-  
+
   /** return the sum of all elements of the vector
    * \return a double
    */
@@ -244,36 +251,64 @@ public:
   /** put data of the vector into a std::string
    * \return std::string
    */
-  const std::string toString() const;
+  std::string toString() const;
+
+  /** send data of the matrix to an ostream
+   * \param os An output stream
+   * \param sv a SiconosVector
+   * \return The same output stream
+   */
+  friend std::ostream& operator<<(std::ostream& os, const SiconosVector& sv);
+
+  /** for iterator interface */
+  typedef SiconosVectorIterator iterator;
+
+  /** for iterator interface */
+  typedef SiconosVectorConstIterator const_iterator;
+
+  /** for iterator interface */
+  iterator begin();
+
+  /** for iterator interface */
+  const_iterator begin() const;
+
+  /** for iterator interface */
+  iterator end();
+
+  /** for iterator interface */
+  const_iterator end() const;
+
+  /** cast an SiconosVector to an std::vector<double> (performs copy) */
+  operator std::vector<double>();
 
   //************************** VECTORS HANDLING AND OPERATORS *******************************
 
   /** get the element at position i in the vector
-   *  \param i an unsigned int 
+   *  \param i an unsigned int
    *  \return a double
    */
   double getValue(unsigned int i) const ;
 
   /** set the element at position i in the vector.
-   *  \param i an unsigned int 
+   *  \param i an unsigned int
    *  \param value
    */
   void setValue(unsigned int i, double value);
 
   /** get the element at position i in the vector
-   *  \param i an integer 
+   *  \param i an integer
    *  \return a double
    */
   double& operator()(unsigned int i);
 
   /** get the element at position i in the vector
-   *  \param i an integer 
+   *  \param i an integer
    *  \return a double
    */
   double operator()(unsigned int i)const;
 
   /** get the vector at position i(ie this for Simple and block i for BlockVector)
-   *  \param i an unsigned integer 
+   *  \param i an unsigned integer
    *  \return a SP::SiconosVector
    */
   inline SP::SiconosVector operator [](unsigned int i)
@@ -282,7 +317,7 @@ public:
   };
 
   /** get the vector at position i(ie this for Simple and block i for BlockVector)
-   *  \param i an unsigned integer 
+   *  \param i an unsigned integer
    *  \return a SP::SiconosVector
    */
   inline SPC::SiconosVector operator [](unsigned int i) const
@@ -291,7 +326,7 @@ public:
   };
 
   /** set the elements starting from position i with input vector
-   *  \param i an unsigned int 
+   *  \param i an unsigned int
    *  \param v a ref to a SiconosVector
    */
   void setBlock(unsigned int i, const SiconosVector& v);
@@ -307,7 +342,7 @@ public:
                unsigned int startIn, unsigned int startOut) const;
 
   /** add the input vector to the elements starting from position i.
-   *  \param i an unsigned int 
+   *  \param i an unsigned int
    *  \param v a SiconosVector
    */
   void addBlock(unsigned int i, const SiconosVector& v);
@@ -368,6 +403,15 @@ public:
   SiconosVector& operator -=(const SiconosVector& v);
   SiconosVector& operator -=(const BlockVector& v);
 
+  /** component-wise exponential of a vector
+      \param SiconosVector input, such that result (this) = exp(input)
+  */
+  void exp(SiconosVector& input);
+
+  /** component-wise exponential of a vector, in-place.
+      this = exp(this)
+  */
+  void exp_in_place();
 
   friend SiconosVector& operator *= (SiconosVector& v, const double& s);
 
@@ -438,6 +482,6 @@ public:
 
 };
 
-
+#include "SiconosVectorIterator.hpp"
 
 #endif

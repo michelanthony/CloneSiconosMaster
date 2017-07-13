@@ -20,8 +20,13 @@
 
 #include "GenericMechanicalProblem.h"
 #include "NonSmoothDrivers.h"
-#include "misc.h"
-
+#include "numerics_verbose.h"
+#include "FrictionContactProblem.h"
+#include "LinearComplementarityProblem.h"
+#include "RelayProblem.h"
+#include "GenericMechanical_Solvers.h"
+#include "NumericsMatrix.h"
+#include "SparseBlockMatrix.h"
 //#define GMP_DEBUG
 
 /* void * solverFC3D; */
@@ -51,14 +56,17 @@ void freeGenericMechanicalProblem(GenericMechanicalProblem * pGMP, unsigned int 
     {
     case SICONOS_NUMERICS_PROBLEM_EQUALITY:
     {
-      free(((LinearSystemProblem *)(pElem->problem))->M);
-      //  free(((LinearSystemProblem *)(pElem->problem))->q);
       break;
     }
     case SICONOS_NUMERICS_PROBLEM_LCP:
     {
       free(((LinearComplementarityProblem *)(pElem->problem))->M);
       //  free(((LinearComplementarityProblem *)(pElem->problem))->q);
+      break;
+    }
+    case SICONOS_NUMERICS_PROBLEM_RELAY:
+    {
+      free(((RelayProblem *)(pElem->problem))->M);
       break;
     }
     case SICONOS_NUMERICS_PROBLEM_FC3D:
@@ -96,6 +104,7 @@ void * addProblem(GenericMechanicalProblem * pGMP, int problemType, int size)
   newProblem->nextProblem = 0;
   newProblem->type = problemType;
   newProblem->size = size;
+  newProblem->error = 0;
   pGMP->size += size;
   if (size > pGMP->maxLocalSize)
     pGMP->maxLocalSize = size;
@@ -117,7 +126,7 @@ void * addProblem(GenericMechanicalProblem * pGMP, int problemType, int size)
   {
     newProblem->problem = (void *) malloc(sizeof(LinearComplementarityProblem));
     LinearComplementarityProblem * pLCP = (LinearComplementarityProblem*)newProblem->problem;
-    pLCP->M = newNumericsMatrix();
+    pLCP->M = NM_new();
     pLCP->q = (double*) malloc(size * sizeof(double));
     newProblem->q = pLCP->q;
     pLCP->M->storageType = 0; /*local prb is dense*/
@@ -127,17 +136,26 @@ void * addProblem(GenericMechanicalProblem * pGMP, int problemType, int size)
 
     break;
   }
+  case (SICONOS_NUMERICS_PROBLEM_RELAY):
+  {
+    newProblem->problem = (void *) malloc(sizeof(RelayProblem));
+    RelayProblem * pRelay = (RelayProblem*)newProblem->problem;
+    pRelay->M = NM_new();
+    pRelay->q = (double*) malloc(size * sizeof(double));
+    newProblem->q = pRelay->q;
+    pRelay->M->storageType = 0; /*local prb is dense*/
+    pRelay->M->size0 = size;
+    pRelay->M->size1 = size;
+    pRelay->size = size;
+    pRelay->lb = (double*)malloc(size * sizeof(double));
+    pRelay->ub = (double*)malloc(size * sizeof(double));
+
+    break;
+  }
   case (SICONOS_NUMERICS_PROBLEM_EQUALITY):
   {
-    newProblem->problem = (void *) malloc(sizeof(LinearSystemProblem));
-    LinearSystemProblem* pLS = (LinearSystemProblem*) newProblem->problem;
-    pLS->size = size;
-    pLS->M = newNumericsMatrix();
-    pLS->q = (double*) malloc(size * sizeof(double));
-    newProblem->q = pLS->q;
-    pLS->M->storageType = 0; /*local prb is dense*/
-    pLS->M->size0 = size;
-    pLS->M->size1 = size;
+    newProblem->problem = NULL;
+    newProblem->q = (double*) malloc(size * sizeof(double));;
     break;
   }
   case (SICONOS_NUMERICS_PROBLEM_FC3D):
@@ -145,7 +163,7 @@ void * addProblem(GenericMechanicalProblem * pGMP, int problemType, int size)
     newProblem->problem = (void *) malloc(sizeof(FrictionContactProblem));
     FrictionContactProblem* pFC3D = (FrictionContactProblem*) newProblem->problem;
     pFC3D->mu = (double*) malloc(sizeof(double));
-    pFC3D->M = newNumericsMatrix();
+    pFC3D->M = NM_new();
     pFC3D->M->storageType = 0; /*Local prb is dense*/
     pFC3D->M->size0 = size;
     pFC3D->M->size1 = size;
@@ -171,7 +189,7 @@ void displayGMP(GenericMechanicalProblem * pGMP)
 
   while (pElem)
   {
-    printf("-->An sub-problem %s.\n", solver_options_id_to_char(pElem->type));
+    printf("-->An sub-problem %s.\n", ns_problem_id_to_name(pElem->type));
     pElem = pElem->nextProblem;
   }
   printf("The sparce block matrice is :\n");
@@ -180,7 +198,7 @@ void displayGMP(GenericMechanicalProblem * pGMP)
   for (ii = 0; ii < pGMP->size; ii++)
     printf("%e ", pGMP->q[ii]);
 
-  //printSBM(pGMP->M->matrix1);
+  //SBM_print(pGMP->M->matrix1);
   printf("\nEND Display a GenericMechanicalProblem:\n");
 }
 
@@ -188,7 +206,7 @@ void genericMechanical_printInFile(GenericMechanicalProblem*  pGMP, FILE* file)
 {
   listNumericsProblem * curProblem = pGMP->firstListElem;
   /*Print M*/
-  printInFile(pGMP->M, file);
+  NM_write_in_file(pGMP->M, file);
   fprintf(file, "\n");
   /*Print Q*/
   for (int ii = 0; ii < pGMP->size; ii++)
@@ -215,8 +233,8 @@ GenericMechanicalProblem * genericMechanical_newFromFile(FILE* file)
 
   //fscanf(file,"%d\n",&nsubProb);
 
-  pGMP->M = newNumericsMatrix();
-  newFromFile(pGMP->M, file);
+  pGMP->M = NM_new();
+  NM_new_from_file(pGMP->M, file);
   SparseBlockStructuredMatrix* m = pGMP->M->matrix1;
 
   pGMP->q = (double *) malloc(pGMP->M->size1 * sizeof(double));

@@ -77,18 +77,20 @@
 
 */
 
-#include "NumericsMatrix.h"
+#include "NumericsFwd.h"
+#include "SiconosConfig.h"
 
+#include <stdio.h>
 /** \struct LinearComplementarityProblem LinearComplementarityProblem.h
  *  \brief Structure that contains and defines \ref LCProblem
   */
-typedef struct
+struct LinearComplementarityProblem
 {
 
   int size; /**<  size of the problem */
   NumericsMatrix* M; /**< M matrix of the LCP (see the mathematical description)*/
   double * q; /**< vector of the LCP (see the mathematical description)*/
-} LinearComplementarityProblem;
+};
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
 extern "C"
@@ -131,6 +133,12 @@ extern "C"
    *  \param problem  pointer to a LinearComplementarityProblem to delete
    */
   void freeLinearComplementarityProblem(LinearComplementarityProblem* problem);
+
+  /** Create new LCP and clear its fields
+   * \return a LinearComplementarityProblem
+   */
+  LinearComplementarityProblem* newLCP(void);
+
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
 }
 #endif

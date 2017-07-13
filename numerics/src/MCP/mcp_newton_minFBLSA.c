@@ -23,7 +23,7 @@
 
 #include "MCP_Solvers.h"
 #include "SiconosLapack.h"
-#include "Newton_Methods.h"
+#include "Newton_methods.h"
 #include "FischerBurmeister.h"
 #include "min_merit.h"
 #include "mcp_newton_FBLSA.h"
@@ -43,7 +43,7 @@ static void min_compute_H_mcp(void* data_opaque, double* z, double* F, double* w
 {
   MixedComplementarityProblem2* data = (MixedComplementarityProblem2 *)data_opaque;
 
-  data->compute_nabla_Fmcp(data->env, data->n1, data->n2, z, data->nabla_Fmcp);
+  data->compute_nabla_Fmcp(data->env, data->n1 + data->n2, z, data->nabla_Fmcp);
 
   Jac_F_min(data->n1, data->n2, z, F, data->nabla_Fmcp, H);
 }

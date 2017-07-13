@@ -370,7 +370,7 @@ int pivot_selection_lemke2(unsigned n, double* restrict col_drive, double* restr
   int block = -1;
   unsigned candidate_indx[SIZE_CANDIDATE_PIVOT];
   unsigned nb_candidate = 0;
-  double candidate_pivot, current_pivot, candidate_ratio;
+  double candidate_pivot, current_pivot =0.0, candidate_ratio;
   double ratio = INFINITY;
   DEBUG_EXPR_WE(max_pivot_helped = 0;);
   for (unsigned i = 0 ; i < n ; ++i)
@@ -443,7 +443,8 @@ int pivot_selection_lemke3(unsigned n, double* restrict col_drive, double* restr
 {
   int block = -1;
   unsigned nb_candidates = 0;
-  double candidate_pivot, current_pivot, candidate_ratio;
+  double candidate_pivot , candidate_ratio;
+  /* double current_pivot; */
   double ratio = INFINITY;
   for (unsigned i = 0 ; i < n ; ++i)
   {
@@ -456,7 +457,7 @@ int pivot_selection_lemke3(unsigned n, double* restrict col_drive, double* restr
       {
         ratio = candidate_ratio;
         block = i;
-        current_pivot = candidate_pivot;
+        /* current_pivot = candidate_pivot; */
         nb_candidates = 0;
         candidate_indx[0] = i;
       }
@@ -676,8 +677,8 @@ int init_M_lemke_warm_start(int n, double* restrict u, double* restrict mat, dou
   }
 
   /* data for LAPACKE */
-  int *ipiv = (int*)malloc((n+1)*sizeof(int));
-  int info = 0;
+  lapack_int *ipiv = (lapack_int*)malloc((n+1)*sizeof(lapack_int));
+  lapack_int info = 0;
 
   /* Compute LU factorisation of basis */
   DGETRF(n, n, mat_basic, n, ipiv, &info);

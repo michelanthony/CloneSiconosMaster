@@ -20,10 +20,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "LinearComplementarityProblem.h"
 #include "LCP_Solvers.h"
+#include "lcp_cst.h"
+#include "SolverOptions.h"
+#include "NumericsMatrix.h"
+
 #include "SiconosLapack.h"
 #include <assert.h>
-
+#include "numerics_verbose.h"
 void lcp_newton_min(LinearComplementarityProblem* problem, double *z, double *w, int *info , SolverOptions* options)
 {
   /* matrix M/vector q of the lcp */
@@ -42,9 +47,9 @@ void lcp_newton_min(LinearComplementarityProblem* problem, double *z, double *w,
   int  incx, incy;
   double err, a1, b1;
   double alpha;
-  int infoDGESV = 0;
+  lapack_int infoDGESV = 0;
 
-  int *ipiv;
+  lapack_int *ipiv;
 
   double *JacH, *H, *A;
 
@@ -118,7 +123,7 @@ void lcp_newton_min(LinearComplementarityProblem* problem, double *z, double *w,
   }
 
 
-  ipiv = (int *)malloc(m * sizeof(int));
+  ipiv = (lapack_int *)malloc(m * sizeof(lapack_int));
 
 
 

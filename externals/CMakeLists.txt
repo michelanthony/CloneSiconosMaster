@@ -29,6 +29,7 @@ set(${COMPONENT}_DIRS
   optim_misc
   optim_misc/ql0001
   SOL/lumod-c
+  sort
   SuiteSparse/CSparse
   SuiteSparse/CSparse_extensions
   tools
@@ -57,6 +58,12 @@ set(${COMPONENT}_EXCLUDE_DOXY
 
 SET(${COMPONENT}_EXCLUDE_SRCS "SOL/lumod-c/sparselib.c" "SOL/lumod-c/lumod_sparse.c")
 
+set_source_files_properties(SOL/lumod-c/lumod_dense.c PROPERTIES COMPILE_FLAGS -Wno-unused-variable)
+set_source_files_properties(SOL/lumod-c/commonlib.c PROPERTIES COMPILE_FLAGS -Wno-unused-variable)
+set_source_files_properties(SuiteSparse/CSparse/csparse.c PROPERTIES COMPILE_FLAGS -Wno-unused)
+
+
+
 if(NOT HAS_ATLAS_LAPACK)
   set(${COMPONENT}_EXCLUDE_SRCS ${${COMPONENT}_EXCLUDE_SRCS} "blas_lapack/clapack_dtrtrs.c")
 endif()
@@ -76,6 +83,7 @@ include(WindowsExternalsSetup)
 if(BUILD_AS_CPP)
   file(GLOB_RECURSE C_FILES ${CMAKE_CURRENT_SOURCE_DIR} *.c)
   set_source_files_properties(${C_FILES} PROPERTIES LANGUAGE CXX)
+  set(${COMPONENT}_LINKER_LANGUAGE CXX)
 endif()
 
 include(LibraryProjectSetup)
@@ -109,9 +117,14 @@ if(HAVE_SICONOS_MECHANICS)
     endif(NOT IS_DIRECTORY ${srcRendererPath})
   endforeach(rendererFile)
 
-  install(PROGRAMS renderer/renderer.py
-    DESTINATION bin RENAME siconos_renderer)
-  
+  if(INSTALL_PYTHON_SYMLINKS)
+    message("Setting up symlink install targets for externals Python executables")
+    install(CODE "execute_process(COMMAND sh -c \"test -e '${CMAKE_INSTALL_PREFIX}/bin/siconos_renderer' || ln -vs '${CMAKE_CURRENT_SOURCE_DIR}/renderer/renderer.py' '${CMAKE_INSTALL_PREFIX}/bin/siconos_renderer'\")")
+  else()
+    install(PROGRAMS renderer/renderer.py
+      DESTINATION bin RENAME siconos_renderer)
+  endif()
+
 endif()
 
 if(WITH_SERIALIZATION)

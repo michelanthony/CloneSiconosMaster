@@ -1,4 +1,5 @@
 
+
 * General/Publications 						:SICONOS:PUB:
 ** RR publication						 :VA:ALLTEAM:
   - update examples et texte, add Numerics part
@@ -169,7 +170,7 @@
 
    ---> This has to be completely reviewed.
 
-** TODO Move Storage of Jacobians in SiconosGraph/Properties      :M3.6:
+** TODO Move Storage of Jacobians in SiconosGraph/Properties        :M3.6:
 ** TODO Remove _y_k and Yold and lambdaOld from Interaction. use workspace or memories
 ** TODO [20%] HEM5 integration 						 :VA:
 *** DONE First integration for the Bouncing Ball example
@@ -186,7 +187,8 @@
    + How to differentiate it
 ** TODO Implement a purely explicit scheme for NewtonEulerDS and NewtonEulerR <2016-04-19 Tue>   
 ** TODO Continue to update signature for second order terms in NewtonEulerR*
-** TODO Implement a better time integration scheme for NewtonEulerDS
+** TODO Implement a better time integration scheme for NewtonEulerDS 	 :VA:
+   DEADLINE: <2016-12-25 Sun> for Xmas
    + The implementation of NewtonEulerDS is done using the angular velocity vector
      with respect to the axis of the body-fixed frame. (\Omega). This approach allows to
      use a constant matrix of moment of inertia. The price to pay is to compute the external
@@ -205,9 +207,8 @@
    + The same instability has to be expected for contact forces over bars even if it difficult to demonstrate 
      it on simple example
 
-
-
-* Development list for Mechanics
+** TODO a first implementation of constraints at the position 
+* Development list for Mechanics 		    :SICONOS:DEVEL:MECHANICS:
 ** how to use plantuml with org
 1. get plantuml.jar http://fr.plantuml.com/download.html
 2. in .emacs :
@@ -512,26 +513,147 @@ organize the Mechanics API.
 #+RESULTS:
 file:GazeboClassDiagram.png
 
+** TODO Rover Revival. (common rope and siconos objectives)
+   DEADLINE: <2016-12-25 Sun>
+   + compilation and execution of Simple standalone rover     :FP:SS:
+   + output trajectory in hdf5 (python version) :VA:MB:SS:
+   + update Jan's blender plugin to do some visualization  :VA:MB:
+   + Rover + granular ? standalone and Gazebo :SS:
+     
 * Development list for io
-** <2016-03-14 Mon> naming convention in hdf5 file
+** TODO Naming convention and structure of the hdf5 mechanics io file
+   DEADLINE: <2016-12-16 Fri>
+   first discussion: <2016-03-14 Mon> 
+   continue <2016-11-21 Mon>
+   + naming 
+     + cf --> contact_friction
+     + dynamic --> position
+     + velocity with the position
+   + structure
+     + split time frame
+     + split hdf5 file
 
-   + cf --> contact_friction
+*** Actual structure
 
-** <2016-07-15 vie>
-*** Tooling and features
-**** Desired features for filtering tool
+h5dump cylinder.hdf5  | grep -E 'DATASET|GROUP'
+GROUP "/" {
+   GROUP "data" {
+      GROUP "boundary_conditions" {
+      DATASET "cf" {
+      DATASET "dynamic" {
+      GROUP "input" {
+         GROUP "cyl" {
+            ATTRIBUTE "id" {
+            ATTRIBUTE "inertia" {
+            ATTRIBUTE "mass" {
+            ATTRIBUTE "orientation" {
+            ATTRIBUTE "time_of_birth" {
+            ATTRIBUTE "translation" {
+            ATTRIBUTE "velocity" {
+            DATASET "Cyl-0" {
+               ATTRIBUTE "group" {
+               ATTRIBUTE "name" {
+               ATTRIBUTE "orientation" {
+               ATTRIBUTE "translation" {
+         GROUP "ground" {
+            ATTRIBUTE "id" {
+            ATTRIBUTE "mass" {
+            ATTRIBUTE "orientation" {
+            ATTRIBUTE "time_of_birth" {
+            ATTRIBUTE "translation" {
+            ATTRIBUTE "velocity" {
+            DATASET "Ground-0" {
+               ATTRIBUTE "group" {
+               ATTRIBUTE "name" {
+               ATTRIBUTE "orientation" {
+               ATTRIBUTE "translation" {
+      GROUP "joints" {
+      GROUP "nslaws" {
+         DATASET "contact" {
+            ATTRIBUTE "e" {
+            ATTRIBUTE "gid1" {
+            ATTRIBUTE "gid2" {
+            ATTRIBUTE "mu" {
+            ATTRIBUTE "type" {
+      GROUP "permanent_interactions" {
+      GROUP "ref" {
+         DATASET "Cyl" {
+            ATTRIBUTE "id" {
+            ATTRIBUTE "primitive" {
+            ATTRIBUTE "type" {
+         DATASET "Ground" {
+            ATTRIBUTE "id" {
+            ATTRIBUTE "primitive" {
+            ATTRIBUTE "type" {
+      DATASET "solv" {
+      DATASET "static" {
+      DATASET "velocities" {
+
+*** Proposition <2016-12-31 Sat>
+    + file_info
+      + IO hdf5 version
+      + author
+      + computer
+      + siconos version
+      + commit number ?
+    + model
+      + shapes (ref new name ?)
+	DATASET (shape_name)
+	ATTRIBUTE : id,primitive,type
+      + GROUP bodies (ex . input, new name)
+	ATTRIBUTE: id, inertia, mass, translation, orientation, velocity, time_of_birth,
+	DATASET : (attached shape) group, name, translation, orientation
+      + boundary_conditions
+      + joints
+      + permanent_interactions
+      + nonsmooth_laws
+        ATTRIBUTE e,gid1,gid2,mu,type
+    + simulation
+      + time step length h
+      + integrator
+	+ name or id.
+	+ parameters (theta, # newton loop, tolerances...)
+      + one_step_non_smooth_problem
+	+ type
+	+ solver id.
+	+ solver parameters. (iparam, dparam, )
+    + simulation_data
+      + coordinates (q, position, orientation, ...)
+      + velocities  (v)
+      + forces      (total applied forces optional)
+      + acceleration (a)
+      + contact     (cf, should we split ?)
+	+ id.
+	+ n,t,s
+	+ p_a, p_b
+	+ lambda[0]
+	+ lambda[1]
+        + ...
+	+ y
+	+ u (contact velocity)
+	+ internal variable of the nslaw
+      + solver info.
+	+ time step
+	+ error, convergence,
+	+ failed steps,
+
+
+** DONE Tooling and features for siconos_vview siconos_filter <2016-07-15 vie>
+   CLOSED: [2016-11-25 Fri 15:19]
+*** Desired features for filtering tool
 
    - remove objects
    - decimate time (done)
    - cut off time (beginning and end) (done)
    - put together two hdf5 simulations
 
-**** Desired features for vview
+*** Desired features for vview
 
    - output current camera position
    - specific starting camera position
    - render video from command line
    - skip to end of file, updating automatically when file changes
+
 
 * Port and support
 ** CrossCompilation - Windows
@@ -698,6 +820,7 @@ representations.  Generally don't include any physics support.
 | OpenSCAD     | http://www.openscad.org/   | Qt/C++     | Constructive geometry front-end, not a library          | GPL v2                 |
 | OpenCSG      | http://www.opencsg.org/    | C++        | Constructive geometry rendering engine used by OpenSCAD | GPL v2                 |
 | CGAL         | http://www.cgal.org/       | C++        | Geometric algorithms used by OpenSCAD                   | GPL v3+, or commercial |
+| SolveSpace   | http://solvespace.com/     | C++        | Constructive geometry 2D/3D                             | GPL 3                  |
 
 ** Scene graph
 
@@ -720,6 +843,12 @@ candidates for integrating Siconos as a back-end/engine.
 | Blender       | https://www.blender.org                   | Art/etc     | Bullet              | C++/Py   | GPL 2+     |
 | RoboCup       | https://sourceforge.net/projects/sserver/ | Robotics    | SimSpark            | C++      | LGPL 3     |
 | OpenSimulator | http://opensimulator.org/                 | "Cloud" sim | ODE / Bullet(expr.) | C#       | Permissive |
+
+** Materials modeling
+
+| Name | URL                      | Type | Language | Licence      |
+|------+--------------------------+------+----------+--------------|
+| Vega | http://run.usc.edu/vega/ | FEM  | C++      | 3-clause BSD |
 
 * Footnotes
 
@@ -1308,3 +1437,171 @@ MB, FP, SS, OH, VA
       + ubuntu
       + debian
       + import siconos
+** <2016-09-13 Tue>
+
+SS, MB, VA
+
++ Discussion Cluster report
+  + one the example of n_cubes : not os good results
+  + one-wall 100 particles. speed up of 5 for 32 cores
+  + visulaization tools for ditrubuted application totalview, vampire ?
+  + large number of particles is necessary > 10000   to show an effect of parallelization
++ Newton Euler DS: 3DOF implementation
++ Discussion about instability of local solver
+  + new hybrid local solver VA
+  + solver LCP 4 faces ?
+  + output problems that shows the problem --> hdf5 files (SS, VA)
+  + implement a local proximal solver VA
++ DMM solver
+  + visualization of domain (SS)
+  + graph partitioning techniques (VA, MB)
+  + improve paraview visualization stuff (MB)
++ interface mechanics / mechanics proposed
+  + try to merge the mechanics proposed into the master branch and update all the examples : We will not maintain both API
+  + work with OpenEng --> merge MBTB into the new interface
+
+** <2016-10-17 Mon>
+
+SS, MB, VA
+
+Meeting @bremond @radarsat1 and myself
+
+still to do,
+
+- InteractionManager
+  - factorize group management info and insertNonSmoothLaw
+  - naming convention : remove get, rename collisionUpdater -->   collisionUpdaterVisitor
+- SiconosContactor
+  - rename siconosContactorS or SiconosContactorSet
+  - why not visitor rather than a list of shapes ?  Why not a mixed solution :
+      - a list of standard shapes (sphere, planes, cubes, convex hulls,) and
+      - a generic shape with a visitor.
+  - study of memory management
+  - offset:
+      - name ?
+      - boost array of size 7 (3 translation, 1 quaternion) for saving space
+-  BodyDS
+    - mass matrix set to eye by default --> possibility to set Inertia Mass matrix
+    - old API --> first shape gives the mass matrix.
+    - computation of mass matrix and inertia with Huygens theorem
+
+- tests that bench memory and efficiency
+   - separate shape, mixed of shapes, contactors with multiple shapes, (mandatory)
+   - time_of_birth and restart  (mandatory)
+   - native ?  2D ? (optional)
+** <2016-11-22 Tue> SIMPAR 2016 preparation
+
+*** Update Rover example C++ code
+    - ultimate goal is to do it in Gazebo/Siconos
+*** VRML output ?
+    - blender
+*** failing examples with other dynamic example
+    - Sebastien's example?
+    -
+*** Developnment of pivot jiont with friction
+    - Real Coulomb friction ?
+    - ideal joint / geometric contact
+    - Viscous friction . LagrangianDS ok   NewtonEulerDS difficult to set a interbal fromce between Two Newton EulerDS
+
+
+*** Control
+    - sliding mode control of mechanical systems
+    - coupling mechanics/electronics/contorl
+
+*** Development of applications
+    - AMTC.  Ensimag student. LHD
+    -
+** <2017-06-15 jue>
+SS, MB, VA
+
+(things to be discussed with FP and OH)
+
+- continue supporting old GCC until at least 4.2 (aiming for december
+  release), after that consider exploiting C++11/14/17 features.
+
+- also wait until at least 4.2 for new SiconosVector features from
+  @bremond, maybe even later (could make use of C++14)
+
+- try to fix within-Newton-loop updateInteractions before 4.1 (SS)
+
+- discussed briefly need for teams to work on numeric (parallelisation
+  strategies), and format specifications for mechanical simulations.
+
+- regardless of a better, more generalized format, agreed that some
+  tweaks to our current HDF5 format are warranted.
+
+- improve VTK output for ParaView also a priority, if possible.  check
+  other possible VTK output formats.
+
+Discussion :
+
++ IRICE project
+  + Siconos, LMGC90, Yade
++ Hdf5 file format
+  + naming
+  + new entries
+  + change time by index of time step.
+  + disorder index in now allowed
+  + indicate the number of entries for each index
+  + branch for new format and filter
+  + common format with other software
+  + Improved structure:
+    + Streaming
+    + webGL application and Jupyter
+  + XDMF
+  + Gazebo format ?
+
+  Conclusion : small project and after
++ Improve paraview visualization stuff (MB)
+  + plugin paraview hdf5 or siconos_vexport
++ HPC
+  + Framework Machine learning
+  + GPU/CPU.
+
++ SiconosVector
+  + Matrix/Vector has to be implemented
+  + Mapping of boost quaterion onto the vector 7
+
++ UpdateWorldFromDS discussion
+
++ release 05 juillet
+
+
+
+*** TODO 3 DOF particles
+*** TODO Pop-corn effect
+  + sum=up previous discussion in the issue
+
+
+*** DONE InteractionManager
+  - factorize group management info and insertNonSmoothLaw
+  - naming convention : remove get, rename collisionUpdater -->   collisionUpdaterVisitor
+
+*** DONE SiconosContactor
+  - rename siconosContactorS or SiconosContactorSet
+  - why not visitor rather than a list of shapes ?  Why not a mixed solution :
+      - a list of standard shapes (sphere, planes, cubes, convex hulls,) and
+      - a generic shape with a visitor.
+  - study of memory management
+  - offset:
+      - name ?
+      - boost array of size 7 (3 translation, 1 quaternion) for saving space
+*** DONE BodyDS
+    - mass matrix set to eye by default --> possibility to set Inertia Mass matrix
+    - old API --> first shape gives the mass matrix.
+    - computation of mass matrix and inertia with Huygens theorem
+
+*** DONE Tests that bench memory and efficiency
+   - separate shape, mixed of shapes, contactors with multiple shapes, (mandatory)
+   - time_of_birth and restart  (mandatory)
+   - native ?  2D ? (optional)
+
+*** TODO Computation of inertia
+   + for composite objects
+     + review default case
+       + density
+       + volume, inertia come from a geometric
+
+*** TODO Dynamics creation of objects
+    + Solution with the controller of radarsat1 to be reviwed and discussed
+

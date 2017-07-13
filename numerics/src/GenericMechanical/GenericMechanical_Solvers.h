@@ -52,10 +52,9 @@ extern "C"
      option->iparam[2]:0 GS block after block, 1 eliminate the equalities, 2 only one equality block, 3 solve the GMP as a MLCP.
      option->iparam[3]: output, number of GS it.
      options->dparam[0]: tolerance
-  \param [in] numerics_options options for display
   \return result (0 if successful otherwise 1).
   */
-  int genericMechanical_driver(GenericMechanicalProblem* problem, double *reaction , double *velocity, SolverOptions* options, NumericsOptions* numerics_options);
+  int genericMechanical_driver(GenericMechanicalProblem* problem, double *reaction , double *velocity, SolverOptions* options);
   /* Build an empty GenericMechanicalProblem
      \return a pointer on the built GenericMechanicalProblem.
    */
@@ -68,7 +67,7 @@ extern "C"
      In the case of SICONOS, the Kernel ensure this allocation in building the global problem. In other words, the matrix0 is shared with the global NumericsMatrix,
      the plug is done in the function genericMechanicalProblem_GS (ie: localProblem->M->matrix0= m->block[diagBlockNumber];)
    \param[in,out] pGMP a pointer.
-   \param[in] problemType type of the added sub-problem (either SICONOS_NUMERICS_PROBLEM_LCP, SICONOS_NUMERICS_PROBLEM_EQUALITY or SICONOS_NUMERICS_PROBLEM_FC3D)
+   \param[in] problemType type of the added sub-problem (either SICONOS_NUMERICS_PROBLEM_LCP, SICONOS_NUMERICS_PROBLEM_EQUALITY, SICONOS_NUMERICS_PROBLEM_FC3D, or SICONOS_NUMERICS_PROBLEM_RELAY)
    \param[in] size size of the formulation (dim of the LCP, or dim of the linear system, 3 for the fc3d)
    \ return the localProblem (either lcp, linearSystem of fc3d
    */
@@ -111,7 +110,7 @@ extern "C"
   /*
    *Containing the Gauss-Seidel algorithm.
    */
-  void genericMechanicalProblem_GS(GenericMechanicalProblem* pGMP, double * reaction, double * velocity, int * info, SolverOptions* options, NumericsOptions* numerics_options);
+  void genericMechanicalProblem_GS(GenericMechanicalProblem* pGMP, double * reaction, double * velocity, int * info, SolverOptions* options);
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
 }
 #endif

@@ -17,6 +17,7 @@
   PY_REGISTER(Topology);                                                \
   PY_REGISTER(LagrangianDS);                                            \
   PY_REGISTER(LagrangianLinearTIDS);                                    \
+  PY_REGISTER(LagrangianLinearDiagonalDS);                              \
   PY_REGISTER(NewtonEulerDS);                                           \
   PY_REGISTER(FirstOrderNonLinearDS);                                   \
   PY_REGISTER(FirstOrderLinearDS);                                      \
@@ -52,15 +53,21 @@
   PY_REGISTER(FrictionContact);                                         \
   PY_REGISTER(EulerMoreauOSI);                                          \
   PY_REGISTER(MoreauJeanOSI);                                           \
+  PY_REGISTER(MoreauJeanBilbaoOSI);                                     \
   PY_REGISTER(MoreauJeanCombinedProjectionOSI);                         \
+  PY_REGISTER(MoreauJeanDirectProjectionOSI);                           \
   PY_REGISTER(ZeroOrderHoldOSI);                                        \
   PY_REGISTER(Simulation);                                              \
   PY_REGISTER(TimeStepping);                                            \
   PY_REGISTER(TimeSteppingCombinedProjection);                          \
+  PY_REGISTER(TimeSteppingDirectProjection);                            \
+  PY_REGISTER(InteractionManager);                                      \
   PY_REGISTER(EventDriven);                                             \
   PY_REGISTER(EventsManager);                                           \
   PY_REGISTER(Event);                                                   \
   PY_REGISTER(Model);                                                   \
   PY_REGISTER(BoundaryCondition);                                       \
+  PY_REGISTER(HarmonicBC);                                              \
+  PY_REGISTER(FixedBC);                                                 \
   PY_REGISTER(OSNSMatrix);                                              \
   PY_REGISTER(BlockCSRMatrix);

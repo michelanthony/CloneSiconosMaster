@@ -63,8 +63,15 @@
 
   \brief
 */
-
+#include "GlobalFrictionContactProblem.h"
+#include "FrictionContactProblem.h"
+#include "NumericsMatrix.h"
 #include "SiconosNumerics.h"
+#include "SparseBlockMatrix.h"
+#include "NumericsSparseMatrix.h"
+#include "SolverOptions.h"
+#include "Friction_cst.h"
+#include "gfc3d_Solvers.h"
 
 int main(int argc, char* argv[])
 {
@@ -148,14 +155,14 @@ int main(int argc, char* argv[])
   numericsProblem.q = q;
   numericsProblem.b = b;
 
-  numericsProblem.M = newNumericsMatrix();
+  numericsProblem.M = NM_new();
   NumericsMatrix *MM =  numericsProblem.M;
   MM->storageType = NM_SPARSE_BLOCK;
   MM->size0 = Ndof;
   MM->size1 = Ndof;
 
 
-  MM->matrix1 = newSBM();
+  MM->matrix1 = SBM_new();
   SparseBlockStructuredMatrix *MBlockMatrix = MM->matrix1;
   MBlockMatrix->nbblocks = 3;
   double * block[3] = {M11, M22, M33};
@@ -173,7 +180,7 @@ int main(int argc, char* argv[])
   MBlockMatrix->index2_data =  index2_data;
 
 
-  numericsProblem.H = newNumericsMatrix();
+  numericsProblem.H = NM_new();
   NumericsMatrix *HH =  numericsProblem.H;
   HH->storageType = 1;
   HH->size0 = Ndof;
@@ -207,14 +214,7 @@ int main(int argc, char* argv[])
   double *reaction = (double*)calloc(m, sizeof(double));
   double *velocity = (double*)calloc(m, sizeof(double));
   double *globalVelocity = (double*)calloc(n, sizeof(double));
-  // Numerics and Solver Options
-
-  NumericsOptions numerics_options;
-  numerics_options.verboseMode = 4; // turn verbose mode to off by default
-
-
-
-
+  // Solver Options
   SolverOptions * numerics_solver_options = (SolverOptions *)malloc(sizeof(SolverOptions));
   //    char solvername[10]= "NSGS";
 
@@ -225,9 +225,8 @@ int main(int argc, char* argv[])
 
   //Driver call
   info = gfc3d_driver(&numericsProblem,
-                                        reaction , velocity, globalVelocity,
-                                        numerics_solver_options, &numerics_options);
-
+		      reaction , velocity, globalVelocity,
+		      numerics_solver_options);
   solver_options_delete(numerics_solver_options);
 
   free(numerics_solver_options);
@@ -242,14 +241,14 @@ int main(int argc, char* argv[])
   free(velocity);
   free(globalVelocity);
 
-  //     freeSBM(MM->matrix1);
-  //     freeSBM(HH->matrix1);
+  //     SBM_free(MM->matrix1);
+  //     SBM_free(HH->matrix1);
   free(MM->matrix1);
   MM->matrix1 = NULL;
   free(HH->matrix1);
   HH->matrix1 = NULL;
-  freeNumericsMatrix(MM);
-  freeNumericsMatrix(HH);
+  NM_free(MM);
+  NM_free(HH);
   free(MM);
   free(HH);
   gfc3d_free_workspace(&numericsProblem);

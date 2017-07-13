@@ -24,8 +24,6 @@
 #include "Register.hpp"
 
 
-SICONOS_IO_REGISTER(NumericsOptions, (verboseMode));
-
 
 template <class Archive>
 void siconos_io(Archive& ar, Callback&v, unsigned int version)
@@ -34,7 +32,7 @@ void siconos_io(Archive& ar, Callback&v, unsigned int version)
 REGISTER_BOOST_SERIALIZATION(Callback);
 
 template <class Archive>
-void siconos_io(Archive& ar, _SolverOptions&v, unsigned int version)
+void siconos_io(Archive& ar, SolverOptions&v, unsigned int version)
 {
   SERIALIZE(v, (solverId)(isSet)(iSize)(dSize)(filterOn)(numberOfInternalSolvers), ar);
 
@@ -44,16 +42,15 @@ void siconos_io(Archive& ar, _SolverOptions&v, unsigned int version)
     v.iparam = (int *) malloc(v.iSize * sizeof(int));
     v.dparam = (double *) malloc(v.dSize * sizeof(double));
     v.internalSolvers = (SolverOptions *) malloc(v.numberOfInternalSolvers * sizeof(SolverOptions));
-    v.numericsOptions = (NumericsOptions *) malloc(sizeof(NumericsOptions));
     v.callback = (Callback *) malloc(sizeof(Callback));
   }
-  SERIALIZE(v, (numericsOptions)(callback), ar);
+  SERIALIZE(v, (callback), ar);
 
   SERIALIZE_C_ARRAY(v.iSize, v, iparam, ar);
   SERIALIZE_C_ARRAY(v.dSize, v, dparam, ar);
   SERIALIZE_C_ARRAY(v.numberOfInternalSolvers, v, internalSolvers, ar);
 }
-REGISTER_BOOST_SERIALIZATION(_SolverOptions);
+REGISTER_BOOST_SERIALIZATION(SolverOptions);
 
 template <class Archive>
 void siconos_io(Archive& ar, LinearComplementarityProblem& v, unsigned int version)
@@ -63,7 +60,7 @@ void siconos_io(Archive& ar, LinearComplementarityProblem& v, unsigned int versi
   if(Archive::is_loading::value)
   {
     v.q = (double *) malloc(v.size * sizeof(double));
-    v.M = newNumericsMatrix();
+    v.M = NM_new();
   }
   SERIALIZE(v, (M), ar);
   SERIALIZE_C_ARRAY(v.size, v, q, ar);
@@ -79,7 +76,7 @@ void siconos_io(Archive& ar, FrictionContactProblem& p, const unsigned int file_
   {
     p.q = (double *) malloc(p.dimension * p.numberOfContacts * sizeof(double));
     p.mu = (double *) malloc(p.numberOfContacts * sizeof(double));
-    p.M = newNumericsMatrix();
+    p.M = NM_new();
   }
 
   SERIALIZE(p, (M), ar);
@@ -177,7 +174,7 @@ REGISTER_BOOST_SERIALIZATION(NumericsMatrix);
 template <class Archive>
 void siconos_io_register_Numerics(Archive& ar)
 {
-  ar.register_type(static_cast<_SolverOptions*>(NULL));
+  ar.register_type(static_cast<SolverOptions*>(NULL));
   ar.register_type(static_cast<LinearComplementarityProblem*>(NULL));
   ar.register_type(static_cast<NumericsMatrix*>(NULL));
   ar.register_type(static_cast<SparseBlockStructuredMatrix*>(NULL));

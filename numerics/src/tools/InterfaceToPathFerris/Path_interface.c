@@ -24,6 +24,10 @@
 #include <stdio.h>
 #include <assert.h>
 
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
 #include "PATH_SDK/include/MCP_Interface.h"
 
 #include "PATH_SDK/include/Path.h"
@@ -32,6 +36,9 @@
 #include "PATH_SDK/include/Macros.h"
 #include "PATH_SDK/include/Output_Interface.h"
 #include "PATH_SDK/include/Options.h"
+#if defined(__cplusplus)
+}
+#endif
 
 #include "NonlinearComplementarityProblem.h"
 #include "PathAlgebra.h"
@@ -39,9 +46,15 @@
 
 #include "Path_interface.h"
 
-#define DEBUG_STDOUT
-#define DEBUG_MESSAGES
+//#define DEBUG_STDOUT
+//#define DEBUG_MESSAGES
 #include "debug.h"
+#include "numerics_verbose.h"
+
+#if defined(__cplusplus)
+#undef restrict
+#define restrict __restrict
+#endif
 
 #if defined(USE_OUTPUT_INTERFACE)
 /* callback to register with PATH: output from PATH will go here */

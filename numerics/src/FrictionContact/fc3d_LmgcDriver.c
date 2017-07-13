@@ -4,58 +4,75 @@
 #include <time.h>
 #include <float.h>
 #include "SiconosBlas.h"
-#include "NumericsOptions.h"
 #include "fc3d_Solvers.h"
 #include "NonSmoothDrivers.h"
 #include "fclib_interface.h"
-
+#include "numerics_verbose.h"
 static int fccounter = -1;
 
 int fc3d_LmgcDriver(double *reaction,
-                                 double *velocity,
-                                 double *q,
-                                 double *mu,
-                                 double* W,
-                                 unsigned int *row,
-                                 unsigned int *column,
-                                 unsigned int nc,
-                                 unsigned int nb,
-                                 int solver_id,
-                                 double tolerance,
-                                 int itermax,
-                                 int verbose,
-                                 int outputFile,
-                                 int freq_output,
-                                 int ndof)
+                    double *velocity,
+                    double *q,
+                    double *mu,
+                    double* W,
+                    unsigned int *row,
+                    unsigned int *column,
+                    unsigned int nc,
+                    unsigned int nb,
+                    int solver_id,
+                    double tolerance,
+                    int itermax,
+                    int verbose,
+                    int outputFile,
+                    int freq_output,
+                    int ndof)
 {
 
-  SparseBlockCoordinateMatrix* MC = newSparseBlockCoordinateMatrix3x3fortran(nc, nc, nb, row, column, W);
+  numerics_set_verbose(verbose);
 
-  SparseBlockStructuredMatrix* M = SBCMToSBM(MC);
+  SparseBlockCoordinateMatrix* MC =  SBCM_new_3x3(nc, nc, nb, row, column, W);
 
-  NumericsMatrix* NM = newSparseNumericsMatrix(nc * 3, nc * 3, M);
+  SparseBlockStructuredMatrix* M = SBCM_to_SBM(MC);
+
+  NumericsMatrix* NM = NM_new_SBM(nc * 3, nc * 3, M);
 
   FrictionContactProblem* FC = frictionContactProblem_new(3, nc, NM, q, mu);
 
   /* frictionContact_display(FC); */
 
-  NumericsOptions numerics_options;
-  setDefaultNumericsOptions(&numerics_options);
-
-  numerics_options.verboseMode = verbose; // turn verbose mode to off by default
-
-
-
   SolverOptions numerics_solver_options;
 
   fc3d_setDefaultSolverOptions(&numerics_solver_options, solver_id);
 
+  if (solver_id == SICONOS_FRICTION_3D_NSGS)
+  {
+    numerics_solver_options.iparam[SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION] = SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT_WITH_FULL_FINAL;
+  }
+  else if  (solver_id == SICONOS_FRICTION_3D_NSN_AC)
+  {
+    numerics_solver_options.iparam[SICONOS_FRICTION_3D_NSN_LINESEARCH] = SICONOS_FRICTION_3D_NSN_LINESEARCH_NO;
+    numerics_solver_options.iparam[SICONOS_FRICTION_3D_NSN_HYBRID_STRATEGY]=SICONOS_FRICTION_3D_NSN_HYBRID_STRATEGY_VI_EG_NSN;
+  }
+
+
   numerics_solver_options.dparam[0] = tolerance;
   numerics_solver_options.iparam[0] = itermax;
 
-  int info = fc3d_driver(FC,
-                                      reaction , velocity,
-                                      &numerics_solver_options, &numerics_options);
+  double * reaction_guess;
+  double * velocity_guess;
+  if (outputFile == 3)
+  {
+    // Save guesses.
+
+    reaction_guess = (double *)malloc(nc*3*sizeof(double));
+    velocity_guess = (double *)malloc(nc*3*sizeof(double));
+    for (unsigned int k =0; k < 3*nc; k++) reaction_guess[k]=reaction[k];
+    for (unsigned int k =0; k < 3*nc; k++) velocity_guess[k]=velocity[k];
+
+  }
+
+
+  int info = fc3d_driver(FC, reaction , velocity, &numerics_solver_options);
 
 
 //  uncomment to save FrictionContactProblem
@@ -111,7 +128,7 @@ int fc3d_LmgcDriver(double *reaction,
   else if (outputFile == 2)
   {
     char fname[256];
-    sprintf(fname, "LMGC_FC3D-i%.5d-%i-%.5d.dat", numerics_solver_options.iparam[7], nc, fccounter++);
+    sprintf(fname, "LMGC_FC3D-i%.5d-%i-%.5d.dat", numerics_solver_options.iparam[SICONOS_IPARAM_ITER_DONE], nc, fccounter++);
     printf("LMGC_FC3D-i%.5d-%i-%.5d.dat", numerics_solver_options.iparam[7], nc, fccounter++);
     FILE * foutput  =  fopen(fname, "w");
     frictionContact_printInFile(FC, foutput);
@@ -124,8 +141,8 @@ int fc3d_LmgcDriver(double *reaction,
     if (fccounter % freq_output == 0)
     {
       char fname[256];
-      sprintf(fname, "LMGC_FC3D-i%.5d-%i-%.5d.hdf5", numerics_solver_options.iparam[7], nc, fccounter);
-      printf("Dump LMGC_FC3D-i%.5d-%i-%.5d.hdf5.\n", numerics_solver_options.iparam[7], nc, fccounter);
+      sprintf(fname, "LMGC_FC3D-i%.5d-%i-%.5d.hdf5", numerics_solver_options.iparam[SICONOS_IPARAM_ITER_DONE], nc, fccounter);
+      printf("Dump LMGC_FC3D-i%.5d-%i-%.5d.hdf5.\n", numerics_solver_options.iparam[SICONOS_IPARAM_ITER_DONE], nc, fccounter);
       /* printf("ndof = %i.\n", ndof); */
 
       FILE * foutput  =  fopen(fname, "w");
@@ -153,12 +170,18 @@ int fc3d_LmgcDriver(double *reaction,
                                   mathInfo,
                                   fname,ndof);
 
+      frictionContact_fclib_write_guess(
+        reaction_guess,
+        velocity_guess,
+        fname);
+
       fclose(foutput);
     }
 #else
     printf("Fclib is not available ...\n");
 #endif
-
+    free(reaction_guess);
+    free(velocity_guess);
   }
 
 
@@ -167,7 +190,7 @@ int fc3d_LmgcDriver(double *reaction,
 
 
 
-  freeSparseBlockCoordinateMatrix3x3fortran(MC);
+   SBCM_free_3x3(MC);
 
   free(M->index1_data);
   free(M->index2_data);

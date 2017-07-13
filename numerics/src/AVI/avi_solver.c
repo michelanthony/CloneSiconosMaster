@@ -16,35 +16,33 @@
  * limitations under the License.
 */
 
-#include "NumericsOptions.h"
 #include "NonSmoothDrivers.h"
-
 #include "AVI_Solvers.h"
+#include "AVI_cst.h"
+#include "numerics_verbose.h"
+#include "assert.h"
+#include "NumericsMatrix.h"
 
-char *  SICONOS_AVI_CAOFERRIS_STR = "AVI from Cao & Ferris";
+const char* const SICONOS_AVI_CAOFERRIS_STR = "AVI from Cao & Ferris";
+const char* const SICONOS_AVI_PATHAVI_STR = "PATHVI";
 
-int avi_driver(AffineVariationalInequalities* problem, double *z , double *w, SolverOptions* options,  NumericsOptions* global_options)
+int avi_driver(AffineVariationalInequalities* problem, double *z , double *w, SolverOptions* options)
 {
+
   assert(options && "avi_driver : null input for solver options");
-
-  /* Set global options */
-  if (global_options)
-  {
-    setNumericsOptions(global_options);
-  }
-
   /* Checks inputs */
   assert(problem && z && w &&
       "avi_driver : input for LinearComplementarityProblem and/or unknowns (z,w)");
 
-  assert(problem->M->storageType == 0 &&
+  assert(problem->M->storageType == NM_DENSE &&
       "avi_driver_DenseMatrix : forbidden type of storage for the matrix M of the AVI");
 
-  /* If the options for solver have not been set, read default values in .opt file */
-  if (options->isSet == 0)
+  assert(options->isSet);
+
+  if (!problem || !problem->M || !problem->q || !options)
   {
-    solver_options_read(0, options);
-    options->filterOn = 1;
+    numerics_error_nonfatal("avi_driver", "Problem data is incomplete: you need to set at least M, q and poly");
+    return -1;
   }
 
   if (verbose > 0)
@@ -62,8 +60,15 @@ int avi_driver(AffineVariationalInequalities* problem, double *z , double *w, So
   switch (id)
   {
   case SICONOS_AVI_CAOFERRIS:
+  {
     info = avi_caoferris(problem, z, w, options);
     break;
+  }
+  case SICONOS_AVI_PATHAVI:
+  {
+    info = avi_pathavi(problem, z, w, options);
+    break;
+  }
   /*error */
   default:
   {

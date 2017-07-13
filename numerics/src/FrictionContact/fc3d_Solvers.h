@@ -24,7 +24,6 @@
 */
 
 #include "FrictionContactProblem.h"
-#include "NumericsOptions.h"
 #include "SolverOptions.h"
 #include "fc3d_AlartCurnier_functions.h"
 #include "fc3d_projection.h"
@@ -64,50 +63,14 @@ extern "C"
 {
 #endif
 
-  /** General interface to solvers for friction-contact 3D problem
-  \param[in] problem the structure which handles the Friction-Contact problem
-  \param[in,out] reaction global vector (n)
-  \param[in,out] velocity global vector (n)
-  \param[in,out] options structure used to define the solver(s) and their parameters
-  \param[in] global_options for Numerics (verbose mode ...)
-  \return result (0 if successful otherwise 1).
-  */
-  int fc3d_driver(FrictionContactProblem* problem, double *reaction , double *velocity, SolverOptions* options, NumericsOptions* global_options);
-
   /** set the default solver parameters and perform memory allocation for fc3d
       \param options the pointer to the options to set
       \param solverId the identifier of the solver
   */
   int fc3d_setDefaultSolverOptions(SolverOptions* options, int solverId);
 
-  
-  enum SICONOS_FRICTION_3D_NSGS_LOCALSOLVER
-  {
-    SICONOS_FRICTION_3D_NSGS_LOCALSOLVER_CONTACTNUMBER = 4
-  };
-  enum SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION
-  {
-    SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_FULL,
-    SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT_WITH_FULL_FINAL,
-    SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT,
-    SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_ADAPTIVE
-  };
-  enum SICONOS_FRICTION_3D_NSGS_SHUFFLE
-  {
-    SICONOS_FRICTION_3D_NSGS_SHUFFLE_FALSE,
-    SICONOS_FRICTION_3D_NSGS_SHUFFLE_TRUE,
-    SICONOS_FRICTION_3D_NSGS_SHUFFLE_TRUE_EACH_LOOP
-  };
-  enum SICONOS_FRICTION_3D_NSGS_RELAXATION
-  {
-    SICONOS_FRICTION_3D_NSGS_RELAXATION_FALSE,
-    SICONOS_FRICTION_3D_NSGS_RELAXATION_TRUE
-  };
-  enum SICONOS_FRICTION_3D_NSGS_FILTER_LOCAL_SOLUTION
-  {
-    SICONOS_FRICTION_3D_NSGS_FILTER_LOCAL_SOLUTION_FALSE,
-    SICONOS_FRICTION_3D_NSGS_FILTER_LOCAL_SOLUTION_TRUE
-  };
+
+
 
   /** Non-Smooth Gauss Seidel solver for friction-contact 3D problem
       \param problem the friction-contact 3D problem to solve
@@ -116,31 +79,35 @@ extern "C"
       \param info return 0 if the solution is found
       \param options the solver options :
       [in] iparam[0] : Maximum iteration number
-      [in] iparam[1] : error computation method :
+
+      [in] iparam[SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION (7)] : error computation method :
           SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_FULL (0) : Full error computation with velocity computation
           SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT_WITH_FULL_FINAL (1) : Light error computation with incremental values on reaction verification of absolute error at the end
           SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_LIGHT (2) : only light error computation (velocity not computed)
           SICONOS_FRICTION_3D_NSGS_ERROR_EVALUATION_ADAPTIVE (3) :  we adapt the frequency of the full erro evaluation.
-      [in] iparam[2] : filter local solution if the local error is greater than 1.0
+
+      [in] iparam[SICONOS_FRICTION_3D_NSGS_FILTER_LOCAL_SOLUTION(14)] : filter local solution if the local error is greater than 1.0
           SICONOS_FRICTION_3D_NSGS_FILTER_LOCAL_SOLUTION_FALSE (0) the filter is not applied
           SICONOS_FRICTION_3D_NSGS_FILTER_LOCAL_SOLUTION_TRUE  (1) the filter is applied
-      [in] iparam[4] : method uses overrelaxation
+
+      [in] iparam[SICONOS_FRICTION_3D_NSGS_RELAXATION(4)] : method uses overrelaxation
           SICONOS_FRICTION_3D_NSGS_RELAXATION_FALSE (0) relaxation is not used,
           SICONOS_FRICTION_3D_NSGS_RELAXATION_TRUE  (1) relaxation is used with parameter dparam[8],
 
-      [in] iparam[5] : shuffle the contact indices in the loop
-           SICONOS_FRICTION_3D_NSGS_SHUFFLE_FALSE (0) : no shuffle
-           SICONOS_FRICTION_3D_NSGS_SHUFFLE_TRUE (1) : shuffle only at the beginning
-           SICONOS_FRICTION_3D_NSGS_SHUFFLE_TRUE_EACH_LOOP (2) : shuffle in each iteration
-      [in] iparam[6] : seed for the random generator in shuffling  contacts
+      [in] iparam[SICONOS_FRICTION_3D_NSGS_SHUFFLE(5)] : shuffle the contact indices in the loop
+          SICONOS_FRICTION_3D_NSGS_SHUFFLE_FALSE (0) : no shuffle
+          SICONOS_FRICTION_3D_NSGS_SHUFFLE_TRUE (1) : shuffle only at the beginning
+          SICONOS_FRICTION_3D_NSGS_SHUFFLE_TRUE_EACH_LOOP (2) : shuffle in each iteration
 
-      [out] iparam[7] = iter number of performed iterations
+      [in] iparam[SICONOS_FRICTION_3D_NSGS_SHUFFLE_SEED(6)] : seed for the random generator in shuffling  contacts
+
+      [out] iparam[SICONOS_IPARAM_ITER_DONE(1)] = iter number of performed iterations
 
       [in]  iparam[8] = error computation frequency
 
-      [in]  dparam[0]  user tolerance on the loop
+      [in]  dparam[SICONOS_DPARAM_TOL(0)] user tolerance on the loop
       [in]  dparam[8]  the relaxation parameter omega
-      [out] dparam[1]  reached error
+      [out] dparam[SICONOS_DPARAM_RESIDU(1)]  reached error
 
       The internal (local) solver must set by the SolverOptions options[1]
 
@@ -426,6 +393,7 @@ extern "C"
   int checkTrivialCase(FrictionContactProblem* problem , double* velocity, double* reaction, SolverOptions* options);
 
 
+  void fc3d_nonsmooth_Newton_AlartCurnier2(FrictionContactProblem* problem, double *reaction, double *velocity, int* info, SolverOptions* options);
 
   
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)

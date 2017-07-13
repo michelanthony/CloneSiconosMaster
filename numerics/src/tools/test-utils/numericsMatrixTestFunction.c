@@ -31,7 +31,7 @@
 #include "SiconosLapack.h"
 #include "numericsMatrixTestFunction.h"
 #include "sanitizer.h"
-
+#include "SparseBlockMatrix.h"
 int test_BuildNumericsMatrix(NumericsMatrix** MM)
 {
 
@@ -137,7 +137,7 @@ int test_BuildNumericsMatrix(NumericsMatrix** MM)
     SBM->block[4][i] = block4[i];
   for (i = 0; i < 4; i++)
     SBM->block[5][i] = block5[i];
-  /* printSBM(SBM); */
+  /* SBM_print(SBM); */
 
   /* M1 and M2 must have the same values.*/
   double tol = 1e-12;
@@ -146,12 +146,12 @@ int test_BuildNumericsMatrix(NumericsMatrix** MM)
   {
     for (j = 0; j < M1->size1; j++)
     {
-      if (fabs(M1->matrix0[i + j * M1->size0] - getValueSBM(M2->matrix1, i, j)) > tol) info = 1;
+      if (fabs(M1->matrix0[i + j * M1->size0] - SBM_get_value(M2->matrix1, i, j)) > tol) info = 1;
 
       /*    printf("%i\t%i\n",i,j); */
-      /*    printf("%lf\n",M1->matrix0[i+j*M1->size0]-getValueSBM(M2->matrix1,i,j));  */
+      /*    printf("%lf\n",M1->matrix0[i+j*M1->size0]-SBM_get_value(M2->matrix1,i,j));  */
       /*    printf("%lf\n",M1->matrix0[i+j*M1->size0]); */
-      /*    printf("%lf\n",getValueSBM(M2->matrix1,i,j));   */
+      /*    printf("%lf\n",SBM_get_value(M2->matrix1,i,j));   */
 
       if (info == 1) break;
     }
@@ -204,19 +204,19 @@ int test_BuildNumericsMatrix(NumericsMatrix** MM)
     SBM2->block[1][i] = block40[i];
 
 
-  /*   printSBM(SBM2); */
+  /*   SBM_print(SBM2); */
   /* M3 and M4 must have the same values.*/
 
   for (i = 0; i < M3->size0; i++)
   {
     for (j = 0; j < M3->size1; j++)
     {
-      if (fabs(M3->matrix0[i + j * M3->size0] - getValueSBM(M4->matrix1, i, j)) > tol) info = 1;
+      if (fabs(M3->matrix0[i + j * M3->size0] - SBM_get_value(M4->matrix1, i, j)) > tol) info = 1;
 
       /*    printf("%i\t%i\n",i,j); */
-      /*    printf("%lf\n",M3->matrix0[i+j*M3->size0]-getValueSBM(M4->matrix1,i,j)); */
+      /*    printf("%lf\n",M3->matrix0[i+j*M3->size0]-SBM_get_value(M4->matrix1,i,j)); */
       /*    printf("%lf\n",M3->matrix0[i+j*M3->size0]); */
-      /*    printf("%lf\n",getValueSBM(M4->matrix1,i,j)); */
+      /*    printf("%lf\n",SBM_get_value(M4->matrix1,i,j)); */
 
       if (info == 1) break;
     }
@@ -261,7 +261,7 @@ int test_prodNumericsMatrix(NumericsMatrix** MM)
   int incx = 1, incy = 1;
   cblas_dgemv(CblasColMajor, CblasNoTrans, n, n, alpha, M1->matrix0, n, x, incx, beta, yref, incy);
 
-  prodNumericsMatrix(n, n, alpha, M1, x, beta, y);
+  NM_gemv(alpha, M1, x, beta, y);
   double tol = 1e-12;
   int info = 0;
   for (i = 0; i < n; i++)
@@ -277,7 +277,7 @@ int test_prodNumericsMatrix(NumericsMatrix** MM)
 
   cblas_dgemv(CblasColMajor, CblasNoTrans, n, m, alpha, M3->matrix0, n, x2, incx, beta, yref2, incy);
 
-  prodNumericsMatrix(m, n, alpha, M3, x2, beta, y2);
+  NM_gemv(alpha, M3, x2, beta, y2);
   for (i = 0; i < n; i++)
   {
     if (fabs(y2[i] - yref2[i]) > tol) info = 1;
@@ -301,7 +301,7 @@ int test_prodNumericsMatrix(NumericsMatrix** MM)
     y[i] = 0.1 * i;
     y2[i] = 0.1 * i;
   }
-  prodNumericsMatrix(n, n, alpha, M2, x, beta, y);
+  NM_gemv(alpha, M2, x, beta, y);
   for (i = 0; i < n; i++)
   {
     if (fabs(y[i] - yref[i]) > tol) info = 1;
@@ -315,7 +315,7 @@ int test_prodNumericsMatrix(NumericsMatrix** MM)
 
 
 
-  prodNumericsMatrix(m, n, alpha, M4, x2, beta, y2);
+  NM_gemv(alpha, M4, x2, beta, y2);
   for (i = 0; i < n; i++)
   {
 
@@ -339,7 +339,7 @@ int test_prodNumericsMatrix(NumericsMatrix** MM)
   free(yref);
   free(yref2);
 
-  printf("== End of test prodNumericsMatrix(NumericsMatrix,vector), result = %d\n", info);
+  printf("== End of test NM_gemv(result = %d\n", info);
 
   return info;
 }
@@ -357,7 +357,7 @@ int test_prodNumericsMatrixNumericsMatrix(NumericsMatrix** MM)
 
 
   int info = -1;
-  printf("== Numerics tests: prodNumericsMatrixNumericsMatrix(NumericsMatrix,NumericsMatrix) == \n");
+  printf("== Numerics tests: NM_gemm(NumericsMatrix,NumericsMatrix) == \n");
   int i, j, k;
   double alpha = 1.0, beta = 0.0;
   double tol = 1e-12;
@@ -371,7 +371,7 @@ int test_prodNumericsMatrixNumericsMatrix(NumericsMatrix** MM)
   C.size1 = M1->size1;
   C.matrix0 = (double *)malloc(C.size0 * C.size1 * sizeof(double));
   MSAN_INIT_VAR(C.matrix0, C.size0 * C.size1);
-  prodNumericsMatrixNumericsMatrix(alpha, M1, M1, beta,  &C);
+  NM_gemm(alpha, M1, M1, beta,  &C);
 
   double * Cref = (double *)malloc(C.size0 * C.size1 * sizeof(double));
   double sum;
@@ -421,7 +421,7 @@ int test_prodNumericsMatrixNumericsMatrix(NumericsMatrix** MM)
   C2.size1 = M3->size1;
   C2.matrix0 = (double *)malloc(C2.size0 * C2.size1 * sizeof(double));
   MSAN_INIT_VAR(C2.matrix0, C2.size0 * C2.size1);
-  prodNumericsMatrixNumericsMatrix(alpha, M1, M3, beta,  &C2);
+  NM_gemm(alpha, M1, M3, beta,  &C2);
 
   double * C2ref = (double *)malloc(C2.size0 * C2.size1 * sizeof(double));
   for (i = 0; i < C2.size0; i++)
@@ -470,12 +470,12 @@ int test_prodNumericsMatrixNumericsMatrix(NumericsMatrix** MM)
   i = 1;
   // while (i > 0)
 
-  allocateMemoryForProdSBMSBM(M2->matrix1, M2->matrix1, SBM3);
-  /* printSBM(SBM3); */
+  SBM_alloc_for_gemm(M2->matrix1, M2->matrix1, SBM3);
+  /* SBM_print(SBM3); */
 
 
-  prodNumericsMatrixNumericsMatrix(alpha, M2, M2, beta,  &C3);
-  //freeSBM(SBM3);
+  NM_gemm(alpha, M2, M2, beta,  &C3);
+  //SBM_free(SBM3);
   printf("i= %i\n", i++);
 
 
@@ -487,12 +487,12 @@ int test_prodNumericsMatrixNumericsMatrix(NumericsMatrix** MM)
   {
     for (j = 0; j < C3.size1; j++)
     {
-      if (fabs(Cref[i + j * C3.size0] - getValueSBM(C3.matrix1, i, j)) > tol) info = 1;
+      if (fabs(Cref[i + j * C3.size0] - SBM_get_value(C3.matrix1, i, j)) > tol) info = 1;
 
       /*    printf("%i\t%i\n",i,j); */
-      /*    printf("%lf\n",fabs(Cref[i+j*C3.size0]-getValueSBM(C3.matrix1,i,j) )); */
+      /*    printf("%lf\n",fabs(Cref[i+j*C3.size0]-SBM_get_value(C3.matrix1,i,j) )); */
       /*     printf("%lf\n",Cref[i+j*C3.size0]);  */
-      /*     printf("%lf\n",getValueSBM(C3.matrix1,i,j));  */
+      /*     printf("%lf\n",SBM_get_value(C3.matrix1,i,j));  */
 
       if (info == 1) break;
     }
@@ -517,10 +517,10 @@ int test_prodNumericsMatrixNumericsMatrix(NumericsMatrix** MM)
   SparseBlockStructuredMatrix * SBM4 = (SparseBlockStructuredMatrix *)malloc(sizeof(SparseBlockStructuredMatrix));
   C4.matrix1 = SBM4;
 
-  allocateMemoryForProdSBMSBM(M2->matrix1, M4->matrix1, SBM4);
-  /* printSBM(SBM4); */
+  SBM_alloc_for_gemm(M2->matrix1, M4->matrix1, SBM4);
+  /* SBM_print(SBM4); */
 
-  prodNumericsMatrixNumericsMatrix(alpha, M2, M4, beta,  &C4);
+  NM_gemm(alpha, M2, M4, beta,  &C4);
 
 
   /*     Check if it is correct */
@@ -531,12 +531,12 @@ int test_prodNumericsMatrixNumericsMatrix(NumericsMatrix** MM)
   {
     for (j = 0; j < C4.size1; j++)
     {
-      if (fabs(C2ref[i + j * C4.size0] - getValueSBM(C4.matrix1, i, j)) > tol) info = 1;
+      if (fabs(C2ref[i + j * C4.size0] - SBM_get_value(C4.matrix1, i, j)) > tol) info = 1;
 
       /*    printf("%i\t%i\n",i,j); */
-      /*    printf("%lf\n",fabs(C2ref[i+j*C4.size0]-getValueSBM(C4.matrix1,i,j) )); */
+      /*    printf("%lf\n",fabs(C2ref[i+j*C4.size0]-SBM_get_value(C4.matrix1,i,j) )); */
       /*     printf("%lf\n",C2ref[i+j*C4.size0]); */
-      /*     printf("%lf\n",getValueSBM(C4.matrix1,i,j)); */
+      /*     printf("%lf\n",SBM_get_value(C4.matrix1,i,j)); */
 
       if (info == 1) break;
     }
@@ -551,9 +551,9 @@ int test_prodNumericsMatrixNumericsMatrix(NumericsMatrix** MM)
     printf("Step 3 ( C = alpha*A*B + beta*C, sparse storage) failed ...\n");
   }
 
-  freeNumericsMatrix(&C4);
+  NM_free(&C4);
 exit_3:
-  freeNumericsMatrix(&C3);
+  NM_free(&C3);
 exit_2:
   free(C2.matrix0);
   free(C2ref);
@@ -829,21 +829,20 @@ int test_NM_row_prod_no_diag(NumericsMatrix* M1, NumericsMatrix* M2)
   free(y);
   sizeY = 2;
   int pos = 1; // pos of the required row of blocks
-  y = (double *)malloc(sizeY * sizeof(double));
-  for (i = 0; i < sizeY; i++) y[i] = 0.0;
+  y = (double *)calloc(sizeY, sizeof(double));
 
 
   yref[0] = 40;
   yref[1] = 16;
 
   /* Sparse ... */
-  NM_row_prod_no_diag(n, sizeY, pos, M2, x, y, 1);
+  NM_row_prod_no_diag(n, sizeY, pos, SIZE_MAX, M2, x, y, NULL, 1);
   for (i = 0; i < sizeY; i++)
   {
     if (fabs(y[i] - yref[i]) > tol) info = 1;
     //  printf("%lf\n", fabs(y[i]-yref[i]));
   }
-  NM_row_prod_no_diag(n, sizeY, pos + 1, M2, x, y, 1);
+  NM_row_prod_no_diag(n, sizeY, pos + 1, SIZE_MAX, M2, x, y, NULL, 1);
   yref[0] = 10;
   yref[1] = 14;
   for (i = 0; i < sizeY; i++)
@@ -857,7 +856,7 @@ int test_NM_row_prod_no_diag(NumericsMatrix* M1, NumericsMatrix* M2)
     printf("Step 2 ( y = subA*x,  sparse storage) failed ...\n");
 
   /* Sparse, += ... */
-  NM_row_prod_no_diag(n, sizeY, pos + 1, M2, x, y, 0);
+  NM_row_prod_no_diag(n, sizeY, pos + 1, SIZE_MAX, M2, x, y, NULL, 0);
   for (i = 0; i < sizeY; i++)
   {
     if (fabs(y[i] - 2 * yref[i]) > tol) info = 1;
@@ -933,7 +932,7 @@ int test_NM_row_prod_no_diag_non_square(NumericsMatrix* M3, NumericsMatrix* M4)
   yref[1] = 0;
 
   /* Sparse ... */
-  NM_row_prod_no_diag(sizeX, sizeY, pos, M4, x, y, 1);
+  NM_row_prod_no_diag(sizeX, sizeY, pos, SIZE_MAX, M4, x, y, NULL, 1);
   for (i = 0; i < sizeY; i++)
   {
     if (fabs(y[i] - yref[i]) > tol) info = 1;
@@ -946,7 +945,7 @@ int test_NM_row_prod_no_diag_non_square(NumericsMatrix* M3, NumericsMatrix* M4)
   yref[0] = 10;
   yref[1] = 14;
 
-  NM_row_prod_no_diag(sizeX, sizeY, pos + 1, M4, x, y, 1);
+  NM_row_prod_no_diag(sizeX, sizeY, pos + 1, SIZE_MAX, M4, x, y, NULL, 1);
 
   for (i = 0; i < sizeY; i++)
   {
@@ -962,7 +961,7 @@ int test_NM_row_prod_no_diag_non_square(NumericsMatrix* M3, NumericsMatrix* M4)
     printf("Step 2 ( y = subA*x,  sparse storage) failed ...\n");
 
   /* Sparse, += ... */
-  NM_row_prod_no_diag(sizeX, sizeY, pos + 1, M4, x, y, 0);
+  NM_row_prod_no_diag(sizeX, sizeY, pos + 1, SIZE_MAX, M4, x, y, NULL, 0);
   for (i = 0; i < sizeY; i++)
   {
     if (fabs(y[i] - 2 * yref[i]) > tol) info = 1;
@@ -982,7 +981,7 @@ int test_NM_row_prod_no_diag_non_square(NumericsMatrix* M3, NumericsMatrix* M4)
 
   return info;
 }
-int test_SBMRowToDense(SparseBlockStructuredMatrix *M)
+int test_SBM_row_to_dense(SparseBlockStructuredMatrix *M)
 {
   double * denseRes = (double*) malloc(M->blocksize0[M->blocknumber0 - 1] * M->blocksize1[M->blocknumber1 - 1] * sizeof(double));
   unsigned int curRow = 0;
@@ -991,13 +990,13 @@ int test_SBMRowToDense(SparseBlockStructuredMatrix *M)
   {
     unsigned int lLin = 0;
     unsigned int nbBlockRow = M->blocksize0[i] - curRow;
-    SBMRowToDense(M, i, denseRes, 0, nbBlockRow);
+    SBM_row_to_dense(M, i, denseRes, 0, nbBlockRow);
     for (unsigned int lin = curRow; lin < M->blocksize0[i]; lin++)
     {
       unsigned int lCol = 0;
       for (unsigned int col = 0; col < nbCol; col++)
       {
-        if (fabs(getValueSBM(M, lin, col) - denseRes[lLin + lCol * (nbBlockRow)]) > 10e-12)
+        if (fabs(SBM_get_value(M, lin, col) - denseRes[lLin + lCol * (nbBlockRow)]) > 10e-12)
         {
           free(denseRes);
           return 1;
@@ -1014,13 +1013,13 @@ int test_SBMRowToDense(SparseBlockStructuredMatrix *M)
 
     //    int lLin=0;
     //    int nbBlockRow=M->blocksize0[i]-curRow;
-    SBMRowToDense(M, i, denseRes, curRow, M->blocksize0[M->blocknumber0 - 1]);
+    SBM_row_to_dense(M, i, denseRes, curRow, M->blocksize0[M->blocknumber0 - 1]);
     curRow = M->blocksize0[i];
   }
 
   double * denseRes2 = (double*) malloc(M->blocksize0[M->blocknumber0 - 1] * M->blocksize1[M->blocknumber1 - 1] * sizeof(double));
 
-  SBMtoDense(M, denseRes2);
+  SBM_to_dense(M, denseRes2);
   for (unsigned int n = 0; n < M->blocksize0[M->blocknumber0 - 1]*M->blocksize1[M->blocknumber1 - 1]; n++)
     if (fabs(denseRes2[n] - denseRes[n]) > 10e-12)
     {
@@ -1033,7 +1032,7 @@ int test_SBMRowToDense(SparseBlockStructuredMatrix *M)
   free(denseRes2);
   return 0;
 }
-int test_RowPermutationSBM(SparseBlockStructuredMatrix *M)
+int test_SBM_row_permutation(SparseBlockStructuredMatrix *M)
 {
   SparseBlockStructuredMatrix MRes;
   unsigned int nbRow = M->blocknumber0;
@@ -1051,9 +1050,9 @@ int test_RowPermutationSBM(SparseBlockStructuredMatrix *M)
     rowBlockIndex[i] = candidate;
     mark[candidate] = 1;
   }
-  RowPermutationSBM(rowBlockIndex, M, &MRes);
+  SBM_row_permutation(rowBlockIndex, M, &MRes);
   double * denseMRes = (double*) malloc(M->blocksize0[M->blocknumber0 - 1] * M->blocksize1[M->blocknumber1 - 1] * sizeof(double));
-  SBMtoDense(&MRes, denseMRes);
+  SBM_to_dense(&MRes, denseMRes);
   double * denseM = (double*) malloc(M->blocksize0[M->blocknumber0 - 1] * M->blocksize1[M->blocknumber1 - 1] * sizeof(double));
   unsigned int curRow = 0;
   unsigned int nbRowInM = M->blocksize0[M->blocknumber0 - 1];
@@ -1065,7 +1064,7 @@ int test_RowPermutationSBM(SparseBlockStructuredMatrix *M)
       nbRow = M->blocksize0[rowInM] - M->blocksize0[rowInM - 1];
     else
       nbRow = M->blocksize0[rowInM];
-    SBMRowToDense(M, rowInM, denseM, curRow, nbRowInM);
+    SBM_row_to_dense(M, rowInM, denseM, curRow, nbRowInM);
     curRow += nbRow;
   }
   for (unsigned int n = 0; n < M->blocksize0[M->blocknumber0 - 1]*M->blocksize1[M->blocknumber1 - 1]; n++)
@@ -1085,7 +1084,7 @@ int test_RowPermutationSBM(SparseBlockStructuredMatrix *M)
   SBMfree(&MRes, 0);
   return 0;
 }
-int test_ColPermutationSBM(SparseBlockStructuredMatrix *M)
+int test_SBM_column_permutation(SparseBlockStructuredMatrix *M)
 {
   SparseBlockStructuredMatrix MRes;
   int nbCol = M->blocknumber1;
@@ -1101,7 +1100,7 @@ int test_ColPermutationSBM(SparseBlockStructuredMatrix *M)
     colBlockIndex[i] = candidate;
     mark[candidate] = 1;
   }
-  ColPermutationSBM(colBlockIndex, M, &MRes);
+  SBM_column_permutation(colBlockIndex, M, &MRes);
   free(colBlockIndex);
   free(mark);
   SBMfree(&MRes, 0);

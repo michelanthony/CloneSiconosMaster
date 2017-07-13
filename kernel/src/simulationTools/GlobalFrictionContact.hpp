@@ -28,7 +28,7 @@
 #include "Friction_cst.h"
 
 /** Pointer to function of the type used for drivers for GlobalFrictionContact problems in Numerics */
-typedef int (*GFC3D_Driver)(GlobalFrictionContactProblem*, double*, double*, double*, SolverOptions*, NumericsOptions*);
+typedef int (*GFC3D_Driver)(GlobalFrictionContactProblem*, double*, double*, double*, SolverOptions*);
 TYPEDEF_SPTR(GlobalFrictionContactProblem)
 
 /** Formalization and Resolution of a Friction-Contact Problem
@@ -102,6 +102,7 @@ protected:
 
   /** Pointer to the function used to call the Numerics driver to solve the problem */
   GFC3D_Driver _gfc_driver;
+
 
 public:
 
@@ -181,6 +182,11 @@ public:
   }
 
   // --- Others functions ---
+  /** initialize the _M and _H matrix */
+  virtual void initOSNSMatrix();
+
+  /** Memory allocation or resizing for z,w,q,b, globalVelocities */
+  void initVectorsMemory();
 
   /** initialize the GlobalFrictionContact problem(compute topology ...)
     \param the simulation, owner of this OSNSPB

@@ -27,6 +27,8 @@
 /* #define DEBUG_MESSAGES */
 /* #define DEBUG_STDOUT */
 #include "debug.h"
+#include "numerics_verbose.h"
+#include <assert.h>
 
 void variationalInequality_HyperplaneProjection(VariationalInequality* problem, double *x, double *w, int* info, SolverOptions* options)
 {
@@ -51,10 +53,10 @@ void variationalInequality_HyperplaneProjection(VariationalInequality* problem, 
   dparam[0] = dparam[2]; // set the tolerance for the local solver
 
 
-  double * xtmp = (double *)malloc(n * sizeof(double));
-  double * wtmp = (double *)malloc(n * sizeof(double));
-  double * xtmp2 = (double *)malloc(n * sizeof(double));
-  double * xtmp3 = (double *)malloc(n * sizeof(double));
+  double * xtmp = (double *)calloc(n , sizeof(double));
+  double * wtmp = (double *)calloc(n , sizeof(double));
+  double * xtmp2 = (double *)calloc(n , sizeof(double));
+  double * xtmp3 = (double *)calloc(n , sizeof(double));
 
   int isVariable = 0;
 
@@ -93,14 +95,6 @@ void variationalInequality_HyperplaneProjection(VariationalInequality* problem, 
       ++iter;
       /** xtmp <-- x (x_k) */
       cblas_dcopy(n , x , 1 , xtmp, 1);
-
-
-
-      
-      
-
-
-      
 
       /* xtmp (y_k)= P_X(x_k-tau F(x_k)) */
       problem->F(problem, n, xtmp, wtmp);

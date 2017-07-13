@@ -40,7 +40,7 @@ SWIG_init(void);
 #include <assert.h>
 //#define DEBUG_MESSAGES 1
 #include <debug.h>
-#include <misc.h>
+#include <numerics_verbose.h>
 
 #if PY_VERSION_HEX < 0x02070000
 #ifndef PyBytes_Check
@@ -60,10 +60,11 @@ SWIG_init(void);
 #endif
 %}
 
-// numpy macros
-%include numpy.i 	
+%include target_datatypes.i
 
-%include <misc.h>
+#ifdef SWIGPYTHON
+// numpy macros
+%include numpy.i
 
 %init %{
   import_array();
@@ -79,6 +80,11 @@ SWIG_init(void);
 
 // mandatory !
 %rename (lambda_) lambda;
+#endif /* SWIGPYTHON */
+
+#ifdef SWIGMATLAB
+%include numpy_matlab.i
+#endif /* SWIGMATLAB */
 
 #ifdef __cplusplus
 

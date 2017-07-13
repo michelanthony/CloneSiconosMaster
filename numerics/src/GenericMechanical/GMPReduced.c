@@ -1,8 +1,38 @@
+/* Siconos is a program dedicated to modeling, simulation and control
+ * of non smooth dynamical systems.
+ *
+ * Copyright 2016 INRIA.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
 #include "NonSmoothDrivers.h"
 #include "pinv.h"
 #include "SiconosBlas.h"
 #include "GMPReduced.h"
-
+#include "numerics_verbose.h"
+#include "GenericMechanicalProblem.h"
+#include "GenericMechanical_Solvers.h"
+#include "FrictionContactProblem.h"
+#include "LinearComplementarityProblem.h"
+#include "LCP_Solvers.h"
+#include "MixedLinearComplementarityProblem.h"
+#include "mlcp_cst.h"
+#include "lcp_cst.h"
+#include "MLCP_Solvers.h"
+#include "SparseBlockMatrix.h"
+#include "NumericsMatrix.h"
+#include <string.h>
 //#define GMP_DEBUG_REDUCED
 //#define GMP_DEBUG_GMPREDUCED_SOLVE
 
@@ -110,7 +140,7 @@ void buildReducedGMP(GenericMechanicalProblem* pInProblem, double * Me, double *
   SparseBlockStructuredMatrix* m = pInProblem->M->matrix1;
 #ifdef GMP_DEBUG_REDUCED
   FILE * titi  = fopen("buildReducedGMP_input.txt", "w");
-  printInFileSBMForScilab(m, titi);
+  SBM_write_in_fileForScilab(m, titi);
   fclose(titi);
 #endif
   int curSize = 0;
@@ -174,9 +204,9 @@ void buildReducedGMP(GenericMechanicalProblem* pInProblem, double * Me, double *
 #endif
   /*building of the permutation matrices*/
   SparseBlockStructuredMatrix Maux;
-  ColPermutationSBM(newIndexOfCol, m, &Maux);
+  SBM_column_permutation(newIndexOfCol, m, &Maux);
   SparseBlockStructuredMatrix Morder;
-  RowPermutationSBM(newIndexOfCol, &Maux, &Morder);
+  SBM_row_permutation(newIndexOfCol, &Maux, &Morder);
   SBMfree(&Maux, 0);
   /*
     get the permutation indices of col (and row).
@@ -199,7 +229,7 @@ void buildReducedGMP(GenericMechanicalProblem* pInProblem, double * Me, double *
   int curPos = 0;
   for (int numBlockRow = 0; numBlockRow < nbBlockRowE; numBlockRow++)
   {
-    SBMRowToDense(&Morder, numBlockRow, Me, curPos, MeRow);
+    SBM_row_to_dense(&Morder, numBlockRow, Me, curPos, MeRow);
     curPos = Morder.blocksize1[numBlockRow];
   }
   curPos = 0;
@@ -210,7 +240,7 @@ void buildReducedGMP(GenericMechanicalProblem* pInProblem, double * Me, double *
   for (int numBlockRow = nbBlockRowE; numBlockRow < nbBlockRowE + nbBlockRowI; numBlockRow++)
   {
     curPos = Morder.blocksize1[numBlockRow] - firtMiLine;
-    SBMRowToDense(&Morder, numBlockRow, Mi, curPos, MiRow);
+    SBM_row_to_dense(&Morder, numBlockRow, Mi, curPos, MiRow);
   }
   SBMfree(&Morder, 0);
 
@@ -304,7 +334,7 @@ void buildReducedGMP(GenericMechanicalProblem* pInProblem, double * Me, double *
  *
  *and GS.
  */
-void GMPReducedEqualitySolve(GenericMechanicalProblem* pInProblem, double *reaction , double *velocity, int * info, SolverOptions* options, NumericsOptions* numerics_options)
+void GMPReducedEqualitySolve(GenericMechanicalProblem* pInProblem, double *reaction , double *velocity, int * info, SolverOptions* options)
 {
 
   SparseBlockStructuredMatrix* m = pInProblem->M->matrix1;
@@ -322,7 +352,7 @@ void GMPReducedEqualitySolve(GenericMechanicalProblem* pInProblem, double *react
 
   if (Me_size == 0)
   {
-    genericMechanicalProblem_GS(pInProblem, reaction, velocity, info, options, numerics_options);
+    genericMechanicalProblem_GS(pInProblem, reaction, velocity, info, options);
     free(reducedProb);
     free(Qreduced);
     free(Rreduced);
@@ -387,7 +417,7 @@ void GMPReducedEqualitySolve(GenericMechanicalProblem* pInProblem, double *react
   numM.size1 = nbCol;
   _pnumerics_GMP->M = &numM;
   _pnumerics_GMP->q = Qreduced;
-  genericMechanicalProblem_GS(_pnumerics_GMP, Rreduced, Vreduced, info, options, numerics_options);
+  genericMechanicalProblem_GS(_pnumerics_GMP, Rreduced, Vreduced, info, options);
 #ifdef GMP_DEBUG_GMPREDUCED_SOLVE
   if (*info)
   {
@@ -437,7 +467,7 @@ void GMPReducedEqualitySolve(GenericMechanicalProblem* pInProblem, double *react
  *Vi=(Mi_2-Mi_1 Me_1^{-1} Me_2)Ri+Qi-Mi1 Me_1^{-1} Qe
  *
  */
-void GMPReducedSolve(GenericMechanicalProblem* pInProblem, double *reaction , double *velocity, int * info, SolverOptions* options, NumericsOptions* numerics_options)
+void GMPReducedSolve(GenericMechanicalProblem* pInProblem, double *reaction , double *velocity, int * info, SolverOptions* options)
 {
 
   SparseBlockStructuredMatrix* m = pInProblem->M->matrix1;
@@ -453,7 +483,7 @@ void GMPReducedSolve(GenericMechanicalProblem* pInProblem, double *reaction , do
 
   if ((Me_size == 0 || Mi_size == 0))
   {
-    genericMechanicalProblem_GS(pInProblem, reaction, velocity, info, options, numerics_options);
+    genericMechanicalProblem_GS(pInProblem, reaction, velocity, info, options);
     free(Me);
     free(Qe);
     free(Mi);
@@ -538,7 +568,7 @@ void GMPReducedSolve(GenericMechanicalProblem* pInProblem, double *reaction , do
   _pnumerics_GMP->q = Qi;
   double *Rreduced = (double *) malloc(Mi_size * sizeof(double));
   double *Vreduced = (double *) malloc(Mi_size * sizeof(double));
-  genericMechanicalProblem_GS(_pnumerics_GMP, Rreduced, Vreduced, info, options, numerics_options);
+  genericMechanicalProblem_GS(_pnumerics_GMP, Rreduced, Vreduced, info, options);
 #ifdef GMP_DEBUG_GMPREDUCED_SOLVE
   if (*info)
   {
@@ -603,7 +633,7 @@ void _GMPReducedEquality(GenericMechanicalProblem* pInProblem, double * reducedP
   if (*Me_size == 0)
   {
     memcpy(Qreduced, pInProblem->q, (*Mi_size)*sizeof(double));
-    SBMtoDense(m, reducedProb);
+    SBM_to_dense(m, reducedProb);
     return;
   }
 
@@ -692,24 +722,20 @@ void GMPasMLCP(GenericMechanicalProblem* pInProblem, double *reaction , double *
     aLCP.M = &M;
     linearComplementarity_setDefaultSolverOptions(&aLCP, &aLcpOptions, SICONOS_LCP_ENUM);
     lcp_enum_init(&aLCP, &aLcpOptions, 1);
-    *info = linearComplementarity_driver(&aLCP, reaction, velocity, &aLcpOptions, 0);
+    *info = linearComplementarity_driver(&aLCP, reaction, velocity, &aLcpOptions);
     lcp_enum_reset(&aLCP, &aLcpOptions, 1);
     goto END_GMP3;
   }
   if (!Mi_size)
   {
     /*it is a linear system.*/
-    LinearSystemProblem aLS;
+    assert(Me_size >= 0);
+    for (size_t i = 0; i < (size_t)Me_size; ++i) reaction[i] = -Qreduced[i];
     NumericsMatrix M;
-    M.storageType = 0;
-    M.size0 = Mi_size;
-    M.size1 = Mi_size;
-    M.matrix0 = reducedProb;
-    M.matrix1 = 0;
-    aLS.size = Me_size;
-    aLS.q = Qreduced;
-    aLS.M = &M;
-    *info = LinearSystem_driver(&aLS, reaction, velocity, 0);
+    NM_fill(&M, NM_DENSE, Me_size, Me_size, reducedProb);
+    *info = NM_gesv(&M, reaction, true);
+    M.matrix0 = NULL;
+    NM_free(&M);
     goto END_GMP3;
   }
   /*it is a MLCP*/
@@ -740,7 +766,7 @@ void GMPasMLCP(GenericMechanicalProblem* pInProblem, double *reaction , double *
   mixedLinearComplementarity_setDefaultSolverOptions(&aMLCP, &aMlcpOptions);
   mlcp_driver_init(&aMLCP, &aMlcpOptions);
   aMlcpOptions.dparam[0] = options->dparam[0];
-  *info = mlcp_driver(&aMLCP, reaction, velocity, &aMlcpOptions, 0);
+  *info = mlcp_driver(&aMLCP, reaction, velocity, &aMlcpOptions);
 
   mlcp_driver_reset(&aMLCP, &aMlcpOptions);
   mixedLinearComplementarity_deleteDefaultSolverOptions(&aMLCP, &aMlcpOptions);

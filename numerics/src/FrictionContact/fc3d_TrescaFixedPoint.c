@@ -26,6 +26,8 @@
 #include <math.h>
 #define VERBOSE_DEBUG
 #include "Friction_cst.h"
+#include "numerics_verbose.h"
+
 void fc3d_TrescaFixedPoint(FrictionContactProblem* problem, double *reaction, double *velocity, int* info, SolverOptions* options)
 {
   /* int and double parameters */
@@ -40,13 +42,13 @@ void fc3d_TrescaFixedPoint(FrictionContactProblem* problem, double *reaction, do
   int itermax = iparam[0];
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+  double norm_q = cblas_dnrm2(nc*3 , problem->q , 1);
  
 
 
   if (options->numberOfInternalSolvers < 1)
   {
-    numericsError("fc3d_TrescaFixedpoint", "The Tresca Fixed Point method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
+    numerics_error("fc3d_TrescaFixedpoint", "The Tresca Fixed Point method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
   }
 
   SolverOptions * internalsolver_options = options->internalSolvers;
@@ -119,7 +121,7 @@ void fc3d_TrescaFixedPoint(FrictionContactProblem* problem, double *reaction, do
 
     /* **** Criterium convergence **** */
 
-    fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq,  &error);
+    fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q,  &error);
 
     if (options->callback)
     {

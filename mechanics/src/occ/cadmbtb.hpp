@@ -12,6 +12,7 @@ class TopoDS_Edge;
 gp_Pnt cadmbtb_FacePoint(const TopoDS_Face &face,Standard_Real u, Standard_Real v);
 gp_Pnt cadmbtb_EdgePoint(const TopoDS_Edge &edge,Standard_Real u);
 gp_Dir cadmbtb_FaceNormal(const TopoDS_Face &face,Standard_Real u, Standard_Real v);
+
 void cadmbtb_distanceFaceFace(const OccContactFace& csh1,
                               const OccContactFace& csh2,
                               Standard_Real& X1, Standard_Real& Y1, Standard_Real& Z1,

@@ -26,7 +26,7 @@
   \author Franck Perignon
 */
 #include "SiconosConfig.h"
-#include "NumericsOptions.h"
+#include "NumericsFwd.h"
 
 /** \struct Callback SolverOptions.h
 Structure used to store user callbacks inside solvers
@@ -42,10 +42,10 @@ typedef struct
 } Callback;
 
 
-/** \struct _SolverOptions SolverOptions.h
+/** \struct SolverOptions_ SolverOptions.h
     Structure used to send options (name, parameters and so on) to a specific solver (mainly from Kernel to Numerics).
 */
-typedef struct _SolverOptions
+struct SolverOptions
 {
   int solverId;                            /**< solverId Id of the solver (see ) */
   int isSet;                               /**< isSet int equal to false(0) if the parameters below have not been set (ie need to read default values) else true(1)*/
@@ -60,15 +60,14 @@ typedef struct _SolverOptions
   int iWorkSize;                           /**< iWorkSize size of vector iWork */
   int * iWork;                             /**< iWork is a pointer on a working memory zone (for integers) reserved for the solver .*/
   int numberOfInternalSolvers;             /**< numberOfInternalSolvers the number of internal or local 'sub-solvers' used by the solver*/
-  struct _SolverOptions * internalSolvers; /**< internalSolvers pointer to sub-solvers*/
-  NumericsOptions * numericsOptions;       /**< numericsOptions global options for numerics (verbose mode ...)*/
+  struct SolverOptions * internalSolvers; /**< internalSolvers pointer to sub-solvers*/
   Callback * callback;                     /**< callback a pointer to user Callback*/
 
   void * solverParameters;                 /**< additional parameters specific to the solver */
 
   void * solverData;                       /**< additional data specific to the solver */
 
-} SolverOptions;
+};
 
 enum SICONOS_NUMERICS_PROBLEM_TYPE
 {
@@ -80,7 +79,8 @@ enum SICONOS_NUMERICS_PROBLEM_TYPE
   SICONOS_NUMERICS_PROBLEM_NCP = 5,
   SICONOS_NUMERICS_PROBLEM_MCP = 6,
   SICONOS_NUMERICS_PROBLEM_VI = 7,
-  SICONOS_NUMERICS_PROBLEM_AVI = 8
+  SICONOS_NUMERICS_PROBLEM_AVI = 8,
+  SICONOS_NUMERICS_PROBLEM_RELAY = 9,
 };
 
 
@@ -107,11 +107,13 @@ enum SICONOS_IPARAM
 #define SICONOS_IPARAM_LSA_NONMONOTONE_LS 3
 #define SICONOS_IPARAM_LSA_NONMONOTONE_LS_M 4
 #define SICONOS_IPARAM_LSA_FORCE_ARCSEARCH 5
+#define SICONOS_IPARAM_LSA_SEARCH_CRITERION 6
+#define SICONOS_IPARAM_GOLDSTEIN_ITERMAX 4
 
 /** non-monotone specific part */
-#define SICONOS_IPARAM_NMS_WATCHDOG_TYPE 6
-#define SICONOS_IPARAM_NMS_PROJECTED_GRADIENT_TYPE 7
-#define SICONOS_IPARAM_NMS_N_MAX 8
+#define SICONOS_IPARAM_NMS_WATCHDOG_TYPE 7
+#define SICONOS_IPARAM_NMS_PROJECTED_GRADIENT_TYPE 8
+#define SICONOS_IPARAM_NMS_N_MAX 9
 
 /** Some values for dparam index */
 enum SICONOS_DPARAM
@@ -121,6 +123,8 @@ enum SICONOS_DPARAM
 };
 /** line-search */
 #define SICONOS_DPARAM_LSA_ALPHA_MIN 2
+#define SICONOS_DPARAM_GOLDSTEIN_C 3
+#define SICONOS_DPARAM_GOLDSTEIN_ALPHAMAX 4
 
 /** non-monotone specific part */
 #define SICONOS_DPARAM_NMS_DELTA 2
@@ -131,15 +135,16 @@ enum SICONOS_DPARAM
 #define SICONOS_DPARAM_NMS_MERIT_INCR 7
 
 
-extern char * SICONOS_NUMERICS_PROBLEM_LCP_STR;
-extern char * SICONOS_NUMERICS_PROBLEM_MLCP_STR;
-extern char * SICONOS_NUMERICS_PROBLEM_NCP_STR;
-extern char * SICONOS_NUMERICS_PROBLEM_MCP_STR;
-extern char * SICONOS_NUMERICS_PROBLEM_EQUALITY_STR;
-extern char * SICONOS_NUMERICS_PROBLEM_FC2D_STR;
-extern char * SICONOS_NUMERICS_PROBLEM_FC3D_STR;
-extern char * SICONOS_NUMERICS_PROBLEM_VI_STR;
-extern char * SICONOS_NUMERICS_PROBLEM_AVI_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_LCP_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_MLCP_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_NCP_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_MCP_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_EQUALITY_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_FC2D_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_FC3D_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_VI_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_AVI_STR;
+extern const char* const SICONOS_NUMERICS_PROBLEM_RELAY_STR;
 
 
 #include "SolverOptions_helpers.h"
@@ -148,17 +153,6 @@ extern char * SICONOS_NUMERICS_PROBLEM_AVI_STR;
 extern "C"
 {
 #endif
-
-  /** Read default parameters values for a solver and save them in a SolverOptions structure
-      \param[in] driverType  type of the considered problem.
-      Only the following solvers ids are allowed :\n
-      0: LCP\n
-      1: MLCP\n
-      2: FrictionContact2D\n
-      3: FrictionContact3D\n
-      \param[out] options structure used to save the parameters
-  */
-  void solver_options_read(int driverType, SolverOptions* options);
 
   /** screen display of solver parameters
       \param options the structure to be displayed
@@ -205,13 +199,13 @@ extern "C"
    * \param Id the id of the solver
    * \return the name of the solver
    */
-  char * solver_options_id_to_name(int Id);
+  const char * solver_options_id_to_name(int Id);
 
   /** return the name of a problem type (LCP, NCP, VI, ...) based on its id
    * \param id the id of the problem
    * \return the name of the problem
    */
-  char * solver_options_id_to_char(int id);
+  const char * ns_problem_id_to_name(int id);
 
   /** free the solverData structure
    * \param options the structure to free

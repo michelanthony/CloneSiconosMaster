@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
 
     SP::NonSmoothLaw nslaw(new NewtonImpactNSL(e));
     SP::Relation relation(new LagrangianScleronomousR("SimplePendulumBilateralConstraintPlugin:h0", "SimplePendulumBilateralConstraintPlugin:G0", "SimplePendulumBilateralConstraintPlugin:G0dot"));
-    SP::Interaction inter(new Interaction(1, nslaw, relation));
+    SP::Interaction inter(new Interaction(nslaw, relation));
 
     // -------------
     // --- Model ---
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
     cout << "Number of events processed during simulation: " << (k + 1) << endl;
     cout << "Number of non-smooth events: " << NumberNSEvent << endl;
     cout << "====> Output file writing ..." << endl << endl;
-    ioMatrix::write("result.dat", "ascii", DataPlot, "noDim");
+    ioMatrix::write("SimplependulumResult.dat", "ascii", DataPlot, "noDim");
     // Comparison with a reference file
     SimpleMatrix dataPlotRef(DataPlot);
     dataPlotRef.zero();

@@ -26,11 +26,73 @@ To get a full list of avaiable commands, read the output of:
 
 """
 from numpy.distutils.core import setup, Extension, Command
+from numpy.distutils.command.build_py import build_py
+from distutils.command.install_lib import install_lib
+from distutils import dir_util
+from distutils.file_util import copy_file
 from numpy.distutils.misc_util import Configuration
 import numpy as np
 import glob
 import os
 import sys
+
+# Modified from distutils.dir_util to not attempt to overwrite
+# symlinks if already present.
+def copy_tree(src, dst, preserve_mode=1, preserve_times=1,
+              preserve_symlinks=0, update=0, verbose=1, dry_run=0):
+    if not dry_run and not os.path.isdir(src):
+        raise DistutilsFileError("cannot copy tree '%s': not a directory" % src)
+    try:
+        names = os.listdir(src)
+    except os.error as er:
+        (errno, errstr) = er
+        if dry_run:
+            names = []
+        else:
+            raise DistutilsFileError("error listing files in '%s': %s" % (src, errstr))
+
+    if not dry_run:
+        dir_util.mkpath(dst, verbose=verbose)
+
+    outputs = []
+
+    for n in names:
+        src_name = os.path.join(src, n)
+        dst_name = os.path.join(dst, n)
+
+        if n.startswith('.nfs'):
+            # skip NFS rename files
+            continue
+
+        if preserve_symlinks and os.path.islink(src_name):
+            link_dest = os.readlink(src_name)
+            if not dry_run:
+                if os.path.exists(dst_name):
+                    if os.readlink(dst_name) != link_dest:
+                        os.remove(dst_name)
+                        if verbose >= 1:
+                            dir_util.log.info("linking %s -> %s", dst_name, link_dest)
+                        os.symlink(link_dest, dst_name)
+                    elif verbose >= 1:
+                        dir_util.log.info("leaving %s -> %s", dst_name, link_dest)
+                else:
+                    if verbose >= 1:
+                        dir_util.log.info("linking %s -> %s", dst_name, link_dest)
+                    os.symlink(link_dest, dst_name)
+            outputs.append(dst_name)
+
+        elif os.path.isdir(src_name):
+            outputs.extend(
+                copy_tree(src_name, dst_name, preserve_mode,
+                          preserve_times, preserve_symlinks, update,
+                          verbose=verbose, dry_run=dry_run))
+        else:
+            copy_file(src_name, dst_name, preserve_mode,
+                      preserve_times, update, verbose=verbose,
+                      dry_run=dry_run)
+            outputs.append(dst_name)
+
+    return outputs
 
 # Make sure I have the right Python version.
 if sys.version_info[:2] < (2,6):
@@ -79,6 +141,35 @@ class clean(Command):
         os.system("rm -rf dist")
         os.system("rm -rf doc/_build")
 
+class build_py_symlink(build_py):
+    def build_module(self, module, module_file, package):
+        if isinstance(package, str):
+            package = package.split('.')
+        elif not isinstance(package, (list, tuple)):
+            raise TypeError(
+                "'package' must be a string (dot-separated), list, or tuple")
+
+        # Now put the module source file into the "build" area -- this is
+        # easy, we just copy it somewhere under self.build_lib (the build
+        # directory for Python source).
+        outfile = self.get_module_outfile(self.build_lib, package, module)
+        dir = os.path.dirname(outfile)
+        self.mkpath(dir)
+        if os.path.exists(outfile) and os.path.realpath(outfile) != module_file:
+            os.remove(outfile)
+        return copy_file(module_file, outfile, preserve_mode=0,
+                         link='sym', update=True, verbose=1)
+
+class install_lib_symlink(install_lib):
+    def install(self):
+        if os.path.isdir(self.build_dir):
+            outfiles = copy_tree(self.build_dir, self.install_dir,
+                                 preserve_symlinks=True, update=True, verbose=1)
+        else:
+            self.warn("'%s' does not exist -- no Python modules to install" %
+                      self.build_dir)
+            return
+        return outfiles
 
 class TestSiconos(Command):
     """Runs all tests under the tests/ folder
@@ -103,6 +194,10 @@ class TestSiconos(Command):
         call("py.test" + " siconos/tests", shell=True, env={"PYTHONPATH": "${CMAKE_BINARY_DIR}/wrap/"})
 
 
+def get_cmake_option(option):
+    opt = option.upper()
+    return opt == "ON" or opt == "1" or opt == "TRUE"
+
 # Full package name
 name = '@SICONOS_PYTHON_PACKAGE@'
 # List of python modules (directories) to be included
@@ -116,23 +211,23 @@ components_list = "@SICONOS_PYTHON_MODULES@"
 # This will probably change if we split each python interface for those packages.
 #with_component['numerics'] = True
 #with_component['kernel'] = "@HAVE_SICONOS_KERNEL@" is "TRUE"
-with_component['control'] = "@HAVE_SICONOS_CONTROL@" is "TRUE"
-with_component['mechanics'] = "@HAVE_SICONOS_MECHANICS@" is "TRUE"
-with_component['io'] = "@HAVE_SICONOS_IO@" is "TRUE"
-with_mechanisms = "@WITH_MECHANISMS@" is "ON"
-with_bullet = "@WITH_BULLET@" is "ON"
-with_occ = "@WITH_OCC@" is "ON"
+with_component['control'] = get_cmake_option("@HAVE_SICONOS_CONTROL@")
+with_component['mechanics'] = get_cmake_option("@HAVE_SICONOS_MECHANICS@")
+with_component['io'] = get_cmake_option("@HAVE_SICONOS_IO@")
+with_mechanisms = get_cmake_option("@WITH_MECHANISMS@")
+with_bullet = get_cmake_option("@WITH_BULLET@")
+with_occ = get_cmake_option("@WITH_OCC@")
 packages_for_tests = []
-with_testing = '@WITH_TESTING@' is 'ON'
+with_testing = get_cmake_option("@WITH_TESTING@")
 if with_testing:
     packages_for_tests.append('siconos.tests')
 
-for comp in with_component.keys():
+for comp in list(with_component.keys()):
     if with_component[comp]:
         packages.append('siconos.' + comp)
 
 if with_component['mechanics']:
-    packages.append('siconos.mechanics.contact_detection')
+    packages.append('siconos.mechanics.collision')
 
 if with_mechanisms:
     packages.append('siconos.mechanics.mechanisms')
@@ -161,6 +256,17 @@ ext_modules = []
 include_dirs = [np.get_include()]
 descr = 'Python bindings for the @PROJECT_NAME@ software.'
 authors = 'Siconos team.'
+cmdclass={'test': PyTest,
+          'clean': clean}
+try:
+    install_symlinks = ("@INSTALL_PYTHON_SYMLINKS@".lower()=='on'
+                        or "@INSTALL_PYTHON_SYMLINKS@".lower()=='true'
+                        or int("@INSTALL_PYTHON_SYMLINKS@")!=0)
+except ValueError:
+    install_symlinks = False
+if install_symlinks:
+    cmdclass['build_py'] = build_py_symlink
+    cmdclass['install_lib'] = install_lib_symlink
 config = Configuration(
     name=name,
     version='@SICONOS_VERSION@',
@@ -173,9 +279,8 @@ config = Configuration(
     packages=packages,
     py_modules=[],
     include_dirs=include_dirs,
-    cmdclass={'test': PyTest,
-              'clean': clean},
-    classifiers=['License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)',
+    cmdclass=cmdclass,
+    classifiers=['License :: OSI Approved :: Apache Software License',
                  'Operating System :: MacOS',
                  'Operating System :: Microsoft :: Windows',
                  'Operating System :: POSIX :: Linux',

@@ -26,7 +26,7 @@
 /* #define DEBUG_STDOUT */
 /* #define DEBUG_MESSAGES */
 #include "debug.h"
-
+#include "numerics_verbose.h"
 
 void fc3d_fixedPointProjection(FrictionContactProblem* problem, double *reaction, double *velocity, int* info, SolverOptions* options)
 {
@@ -44,7 +44,7 @@ void fc3d_fixedPointProjection(FrictionContactProblem* problem, double *reaction
   int itermax = iparam[0];
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+  double norm_q = cblas_dnrm2(nc*3 , problem->q , 1);
 
   /*****  Fixed point iterations *****/
   int iter = 0; /* Current iteration number */
@@ -93,9 +93,9 @@ void fc3d_fixedPointProjection(FrictionContactProblem* problem, double *reaction
   double * reactiontmp = 0;
   if (isVariable)
   {
-    reaction_k = (double *)malloc(n * sizeof(double));
-    velocity_k = (double *)malloc(n * sizeof(double));
-    reactiontmp = (double *)malloc(n * sizeof(double));
+    reaction_k = (double *)calloc(n,sizeof(double));
+    velocity_k = (double *)calloc(n,sizeof(double));
+    reactiontmp = (double *)calloc(n,sizeof(double));
   }
 
 
@@ -117,7 +117,7 @@ void fc3d_fixedPointProjection(FrictionContactProblem* problem, double *reaction
 
       /* velocity_k <- q + M * reaction_k  */
       beta = 1.0;
-      prodNumericsMatrix(n, n, alpha, M, reaction_k, beta, velocity_k);
+      NM_gemv(alpha, M, reaction_k, beta, velocity_k);
 
       ls_iter = 0 ;
       success =0;
@@ -149,7 +149,7 @@ void fc3d_fixedPointProjection(FrictionContactProblem* problem, double *reaction
         /* velocity <- q + M * reaction  */
         cblas_dcopy(n , q , 1 , velocity, 1);
         beta = 1.0;
-        prodNumericsMatrix(n, n, alpha, M, reaction, beta, velocity);
+        NM_gemv(alpha, M, reaction, beta, velocity);
 
         DEBUG_EXPR_WE( for (int i =0; i< 5 ; i++)
                        {
@@ -203,7 +203,7 @@ void fc3d_fixedPointProjection(FrictionContactProblem* problem, double *reaction
 
 
       /* **** Criterium convergence **** */
-      fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq, &error);
+      fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q, &error);
       DEBUG_EXPR_WE(
         if ((error < error_k))
         {

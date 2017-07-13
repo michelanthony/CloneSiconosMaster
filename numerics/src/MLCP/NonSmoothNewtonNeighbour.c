@@ -18,13 +18,13 @@
 #include "NonSmoothNewton.h"
 #include "NonSmoothNewtonNeighbour.h"
 //#include "MixedLinearComplementarityProblem.h"
-
-#include "NumericsOptions.h"
+#include <string.h>
 #include "math.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "SiconosLapack.h"
 #include "mlcp_enum_tool.h"
+#include "numerics_verbose.h"
 
 
 
@@ -42,7 +42,7 @@ static  double *sPrevDirDescent;
 static  double *szaux ;
 static  double *szzaux ;
 static  double *sz2 ;
-static  int* sipiv ;
+static  lapack_int* sipiv ;
 static  int* sW2V;
 
 static int scmp = 0;
@@ -457,7 +457,7 @@ int nonSmoothNewtonNeigh(int n, double* z, NewtonFunctionPtr* phi, NewtonFunctio
 
   int incx = 1;
   /*   int n2 = n*n; */
-  int infoDGESV;
+  lapack_int infoDGESV;
 
   /** merit function and its jacobian */
   double psi_z;

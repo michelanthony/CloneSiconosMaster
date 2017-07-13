@@ -23,6 +23,8 @@
 #include <float.h>
 
 #include "NumericsMatrix.h"
+#include "NumericsSparseMatrix.h"
+#include "SolverOptions.h"
 #include "FrictionContactProblem.h"
 #include "fc3d_Solvers.h"
 #include "fc3d_compute_error.h"
@@ -404,7 +406,7 @@ static int fc3d_AVI_gams_base(FrictionContactProblem* problem, double *reaction,
   NM_null(&Akmat);
 
   DEBUG_PRINT("FC3D_AVI_GAMS :: seeting basic directories\n");
-  SN_Gams_set_dirs(options->solverParameters, defModel, defGAMSdir, model, sysdir, "/fc_vi-condensed.gms");
+  SN_Gams_set_dirs((SN_GAMSparams*)options->solverParameters, defModel, defGAMSdir, model, sysdir, "/fc_vi-condensed.gms");
 
   const char* filename = GAMSP_get_filename(options->solverParameters);
 
@@ -465,7 +467,7 @@ static int fc3d_AVI_gams_base(FrictionContactProblem* problem, double *reaction,
   getGamsOpt(Optr, sysdir);
 
   optHandle_t Opts[] = {Optr, solverOptPtr};
-  SN_Gams_set_options(options->solverParameters, Opts);
+  SN_Gams_set_options((SN_GAMSparams*)options->solverParameters, Opts);
 
   if (strcmp(solverName, "path"))
   {
@@ -690,6 +692,7 @@ static int fc3d_AVI_gams_base(FrictionContactProblem* problem, double *reaction,
      ************************************************/
     unsigned offset_row = 0;
     double* xtmp = (double*)calloc(size, sizeof(double));
+    double workTmp[3];
     for (unsigned i3 = 0, i = 0; i3 < size; ++i, i3 += 3)
     {
       double res = 0.;
@@ -701,7 +704,7 @@ static int fc3d_AVI_gams_base(FrictionContactProblem* problem, double *reaction,
       DEBUG_PRINTF("Contact %d, del r = [%.*e; %.*e; %.*e]\n", i, DECIMAL_DIG, reaction_old[i3+0]-ri[0], DECIMAL_DIG, reaction_old[i3+1]-ri[1], DECIMAL_DIG, reaction_old[i3+2]-ri[2]);
       assert(i < (unsigned)problem->numberOfContacts);
       double mu = problem->mu[i];
-      fc3d_unitary_compute_and_add_error(ri, ui, mu, &res);
+      fc3d_unitary_compute_and_add_error(ri, ui, mu, &res, workTmp);
       residual_contact[i] = sqrt(res);
       DEBUG_EXPR_WE(if (res > old_residual) { printf("Contact %d, res = %g > %g = old_residual\n", i, sqrt(res), old_residual); });
       total_residual += res;
@@ -1069,8 +1072,8 @@ bad_angle:
     SN_logh5_vec_double(problem->numberOfContacts, real_angles, "real_angles", logger_s->group);
     SN_logh5_vec_double(problem->numberOfContacts, residual_contact, "residual_contact", logger_s->group);
     /*  XXX buggy here, implement a SN_logh5_vec_integer */
-    SN_logh5_vec_int64(problem->numberOfContacts, type_contact, "type_contact", logger_s->group);
-    SN_logh5_vec_int64(problem->numberOfContacts, type_contact_avi, "type_contact_avi", logger_s->group);
+    SN_logh5_vec_uint64(problem->numberOfContacts, type_contact, "type_contact", logger_s->group);
+    SN_logh5_vec_uint64(problem->numberOfContacts, type_contact_avi, "type_contact_avi", logger_s->group);
     SN_logh5_end_iter(logger_s);
   }
 
@@ -1098,9 +1101,9 @@ TERMINATE:
 
   optFree(&Optr);
   optFree(&solverOptPtr);
-  freeNumericsMatrix(&Wtmat);
-  freeNumericsMatrix(&Emat);
-  freeNumericsMatrix(&Akmat);
+  NM_free(&Wtmat);
+  NM_free(&Emat);
+  NM_free(&Akmat);
 
   free(reaction_old);
   free(velocity_old);

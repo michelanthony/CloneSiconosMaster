@@ -22,9 +22,14 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "LinearComplementarityProblem.h"
 #include "LCP_Solvers.h"
-#include "pivot-utils.h"
+#include "lcp_cst.h"
+#include "SolverOptions.h"
+#include "NumericsMatrix.h"
 
+#include "pivot-utils.h"
+#include "numerics_verbose.h"
 #include "SiconosLapack.h"
 
 //#define DEBUG_STDOUT
@@ -266,10 +271,10 @@ void lcp_pivot_covering_vector(LinearComplementarityProblem* problem, double* re
   {
     /* Principal Pivoting Methods  */
     case SICONOS_LCP_PIVOT_BARD:
-      basis[block] = basis[block] <= (int)dim ? block + dim + 2 : block + 1;
+      basis[block] = basis[block] <= (int)dim ? block + (int)dim + 2 : block + 1;
       break;
     case SICONOS_LCP_PIVOT_LEAST_INDEX:
-      basis[block] = basis[block] <= (int)dim ? block + dim + 2 : block + 1;
+      basis[block] = basis[block] <= (int)dim ? block + (int)dim + 2 : block + 1;
       break;
     case SICONOS_LCP_PIVOT_PATHSEARCH:
       DEBUG_PRINTF("t value : %le\n", mat[t_indx]);

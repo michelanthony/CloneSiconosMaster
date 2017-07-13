@@ -138,12 +138,14 @@ with \f$C^{\alpha}_{\mu^\alpha} =\{ r^\alpha, \|r_{t}\| \leq \mu_{\alpha} |r^\al
   \brief Definition of a structure to handle with friction-contact (2D or 3D) problems.
 */
 
-#include "NumericsMatrix.h"
+#include "NumericsFwd.h"
+#include "SiconosConfig.h"
+#include <stdio.h>
 
 /** \struct FrictionContactProblem FrictionContactProblem.h
  *  The structure that defines a (reduced or dual) Friction-Contact (3D or 2D) problem, see details in \ref fcProblem.
 */
-typedef struct
+struct FrictionContactProblem
 {
   /** dimension of the contact space (3D or 2D ) */
   int dimension;
@@ -157,7 +159,7 @@ typedef struct
   /** \f${\mu} \in {{\mathrm{I\!R}}}^{n_c} \f$, vector of friction coefficients
       (\f$ n_c =\f$ numberOfContacts) */
   double* mu;
-} FrictionContactProblem;
+};
 
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
@@ -189,7 +191,7 @@ extern "C"
    * \return 0 if successfull
    */
   int frictionContact_newFromFile(FrictionContactProblem*  problem, FILE* file);
-  
+
   /** read a FrictionContactProblem in a file (numerics .dat format) from its filename
    * \param problem the problem to read
    * \param filename the name of the target file
@@ -215,6 +217,9 @@ extern "C"
       NumericsMatrix* M, double* q, double* mu);
 
 
+  /* create an empty FrictionContactProblem
+   * \return an empty fcp */
+  FrictionContactProblem* newFCP(void);
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
 }

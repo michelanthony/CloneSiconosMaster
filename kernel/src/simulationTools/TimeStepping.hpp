@@ -98,6 +98,15 @@ protected:
    */
   bool _isNewtonConverge;
 
+  /** boolean variable indicating whether interactions should be
+   * updated within the Newton loop.
+   */
+  bool _newtonUpdateInteractionsPerIteration;
+
+  /** boolean variable to display Newton info
+   */
+  bool _displayNewtonConvergence;
+
   /** boolean variable to force an explicit evaluation of the Jacobians
    * mapping of relations only at the beginning of the time--step and
    * not in the Newton iteration
@@ -154,11 +163,6 @@ public:
 
   /** increment model current time according to User TimeDiscretisation and call SaveInMemory. */
   virtual void nextStep();
-
-  /** update input, state of each dynamical system and output
-   *  \param levelInput lambda order used to compute input
-   */
-  void update(unsigned int levelInput);
 
   /** integrates all the DynamicalSystems taking not into account nslaw, reactions (ie non-smooth part) ...
   */
@@ -233,7 +237,11 @@ public:
   {
     return _isNewtonConverge;
   };
-
+  
+  void setDisplayNewtonConvergence(bool newval)
+  {
+    _displayNewtonConvergence = newval;
+  };
   bool explicitJacobiansOfRelation()
   {
   return  _explicitJacobiansOfRelation;
@@ -310,6 +318,22 @@ public:
     return _newtonMaxIteration;
   };
 
+  /** set whether updateInterations should be called on each Newton iteration
+   *  \param update a bool indiciating the Newton updateInterations behaviour
+   */
+  void setNewtonUpdateInteractionsPerIteration(bool update)
+  {
+    _newtonUpdateInteractionsPerIteration = update;
+  };
+
+  /** get the Newton updateInterations behaviour
+   *  \return a bool indicating the Newton updateInterations behaviour
+   */
+  bool newtonUpdateInteractionsPerIteration()
+  {
+    return _newtonUpdateInteractionsPerIteration;
+  };
+
   /** set the NewtonOptions
    *  \param v Newton solver options
    */
@@ -351,16 +375,6 @@ public:
   {
     return _newtonResiduRMax;
   };
-
-
-  /*TS set the ds->q memory, the world (CAD model for example) must be updated.
-    Overload this method to update user model.*/
-  virtual void updateWorldFromDS()
-  {
-    ;
-  };
-
-
 
   /** visitors hook
   */

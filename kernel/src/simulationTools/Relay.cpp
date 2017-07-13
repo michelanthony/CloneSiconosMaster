@@ -22,6 +22,9 @@
 #include "Simulation.hpp"
 #include "RelayNSL.hpp"
 #include "OSNSMatrix.hpp"
+
+// --- Numerics headers ---
+#include "NonSmoothDrivers.h"
 #include <Relay_Solvers.h>
 
 #include <limits>
@@ -130,7 +133,7 @@ int Relay::compute(double time)
 
     // Compute q, this depends on the type of non smooth problem, on
     // the relation type and on the non smooth law
-    unsigned int pos = _M->getPositionOfInteractionBlock(*inter);
+    unsigned int pos = indexSet.properties(*ui).absolute_position;
     SP::SiconosVisitor NSLEffect(new _BoundsNSLEffect(this, inter, pos));
     inter->nonSmoothLaw()->accept(*NSLEffect);
   }
@@ -146,7 +149,7 @@ int Relay::compute(double time)
   {
     // The Relay in Numerics format
     RelayProblem numerics_problem;
-    numerics_problem.M = &*_M->getNumericsMatrix();
+    numerics_problem.M = &*_M->numericsMatrix();
     numerics_problem.q = _q->getArray();
     numerics_problem.lb = _lb->getArray();
     numerics_problem.ub = _ub->getArray();
@@ -158,7 +161,7 @@ int Relay::compute(double time)
     //      Relay_display(&numerics_problem);
 
     info = relay_driver(&numerics_problem, _z->getArray() , _w->getArray() ,
-                        &*_numerics_solver_options, &*_numerics_options);
+                        &*_numerics_solver_options);
 
     if (info != 0)
     {

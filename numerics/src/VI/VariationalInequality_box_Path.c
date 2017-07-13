@@ -1,3 +1,21 @@
+/* Siconos is a program dedicated to modeling, simulation and control
+ * of non smooth dynamical systems.
+ *
+ * Copyright 2016 INRIA.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
 
 #include <stdio.h>
 #include "VariationalInequality.h"
@@ -10,6 +28,10 @@
 #include <limits.h>
 #include <assert.h>
 
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
 #include "PATH_SDK/include/MCP_Interface.h"
 
 #include "PATH_SDK/include/Path.h"
@@ -18,15 +40,24 @@
 #include "PATH_SDK/include/Macros.h"
 #include "PATH_SDK/include/Output_Interface.h"
 #include "PATH_SDK/include/Options.h"
+#if defined(__cplusplus)
+}
+#endif
 
 #include "SiconosSets.h"
 #include "PathAlgebra.h"
 
 #include "Path_interface.h"
+#include "NumericsMatrix.h"
 
 //#define DEBUG_STDOUT
 //#define DEBUG_MESSAGES
 #include "debug.h"
+
+#if defined(__cplusplus)
+#undef restrict
+#define restrict __restrict
+#endif
 
 static CB_FUNC(void) PATH_problem_size(void* restrict id, int* restrict n, int* restrict nnz)
 {

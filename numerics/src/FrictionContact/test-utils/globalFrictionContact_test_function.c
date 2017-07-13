@@ -19,13 +19,20 @@
 #include <stdlib.h>
 #include "NonSmoothDrivers.h"
 #include "globalFrictionContact_test_function.h"
-
-
+#include "gfc3d_Solvers.h"
+#include "GlobalFrictionContactProblem.h"
+#include "NumericsMatrix.h"
+#include "numerics_verbose.h"
+#if defined(WITH_FCLIB)
+#include <fclib.h>
+#include <fclib_interface.h>
+#endif
 int globalFrictionContact_test_function(FILE * f, SolverOptions * options)
 {
 
   int k, info = -1 ;
   GlobalFrictionContactProblem* problem = (GlobalFrictionContactProblem *)malloc(sizeof(GlobalFrictionContactProblem));
+  numerics_set_verbose(1);
 
   info = globalFrictionContact_newFromFile(problem, f);
   globalFrictionContact_display(problem);
@@ -33,11 +40,6 @@ int globalFrictionContact_test_function(FILE * f, SolverOptions * options)
 
   FILE * foutput  =  fopen("checkinput.dat", "w");
   info = globalFrictionContact_printInFile(problem, foutput);
-
-
-  NumericsOptions global_options;
-  setDefaultNumericsOptions(&global_options);
-  global_options.verboseMode = 1; // turn verbose mode to off by default
 
   int NC = problem->numberOfContacts;
   int dim = problem->dimension;
@@ -64,8 +66,8 @@ int globalFrictionContact_test_function(FILE * f, SolverOptions * options)
   else if (dim == 3)
   {
     info = gfc3d_driver(problem,
-                                          reaction , velocity, globalvelocity,
-                                          options, &global_options);
+			reaction , velocity, globalvelocity,
+			options);
   }
   printf("\n");
   for (k = 0 ; k < dim * NC; k++)
@@ -77,6 +79,16 @@ int globalFrictionContact_test_function(FILE * f, SolverOptions * options)
     printf("GlocalVelocity[%i] = %12.8e\n", k, globalvelocity[k]);
   }
   printf("\n");
+
+  for (k = 0; k < dim * NC; ++k)
+  {
+    info = info == 0 ? !(isfinite(velocity[k]) && isfinite(reaction[k])) : info;
+  }
+
+  for (k = 0; k < n; ++k)
+  {
+    info = info == 0 ? !(isfinite(globalvelocity[k])) : info;
+  }
 
   if (!info)
   {
@@ -98,4 +110,78 @@ int globalFrictionContact_test_function(FILE * f, SolverOptions * options)
 
 }
 
+#if defined(WITH_FCLIB)
 
+int gfc3d_test_function_hdf5(const char* path, SolverOptions* options)
+{
+
+  int k, info = -1 ;
+
+  GlobalFrictionContactProblem* problem = globalFrictionContact_fclib_read(path);
+  FILE * foutput  =  fopen("checkinput.dat", "w");
+  info = globalFrictionContact_printInFile(problem, foutput);
+
+  int NC = problem->numberOfContacts;
+  int dim = problem->dimension;
+  int n = problem->M->size0;
+
+  double *reaction = (double*)calloc(dim * NC, sizeof(double));
+  double *velocity = (double*)calloc(dim * NC, sizeof(double));
+  double *global_velocity = (double*)calloc(n, sizeof(double));
+
+  if (dim == 3)
+  {
+    info = gfc3d_driver(problem, reaction, velocity, global_velocity, options);
+  }
+  else
+  {
+    fprintf(stderr, "gfc3d_test_function_hdf5 :: problem size != 3\n");
+    return 1;
+  }
+  printf("\n");
+
+  int print_size = 10;
+
+  if  (dim * NC >= print_size)
+  {
+    printf("First values (%i)\n", print_size);
+    for (k = 0 ; k < print_size; k++)
+    {
+      printf("Velocity[%i] = %12.8e \t \t Reaction[%i] = %12.8e\n", k, velocity[k], k , reaction[k]);
+    }
+    printf(" ..... \n");
+  }
+  else
+  {
+    for (k = 0 ; k < dim * NC; k++)
+    {
+      printf("Velocity[%i] = %12.8e \t \t Reaction[%i] = %12.8e\n", k, velocity[k], k , reaction[k]);
+    }
+    printf("\n");
+  }
+
+  /* for (k = 0 ; k < dim * NC; k++) */
+  /* { */
+  /*   printf("Velocity[%i] = %12.8e \t \t Reaction[%i] = %12.8e\n", k, velocity[k], k , reaction[k]); */
+  /* } */
+  /* printf("\n"); */
+
+  if (!info)
+  {
+    printf("test successful, residual = %g\n", options->dparam[1]);
+  }
+  else
+  {
+    printf("test unsuccessful, residual = %g\n", options->dparam[1]);
+  }
+  free(reaction);
+  free(velocity);
+  free(global_velocity);
+
+  freeGlobalFrictionContactProblem(problem);
+  fclose(foutput);
+
+  return info;
+
+}
+#endif

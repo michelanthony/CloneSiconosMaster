@@ -15,14 +15,21 @@ if(WITH_PYTHON_WRAPPER)
 
   # -- Swig flags --
   if(SYSTEM_ARCHITECTURE)
-    set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS};-D__${SYSTEM_ARCHITECTURE}__")
+    list(APPEND CMAKE_SWIG_FLAGS "-D__${SYSTEM_ARCHITECTURE}__")
   endif()
-  
+
+  if(PYTHON_VERSION_MAJOR VERSION_GREATER 2)
+    list(APPEND CMAKE_SWIG_FLAGS "-py3")
+  endif()
+
+  list(REMOVE_DUPLICATES CMAKE_SWIG_FLAGS)
+  set(CMAKE_SWIG_FLAGS "${CMAKE_SWIG_FLAGS}" CACHE INTERNAL "Swig flags")
+
   # -dirvtable      - Generate a pseudo virtual table for directors for faster dispatch
   # - without "dirprot", swig wrap public methods and only the 
   # protected methods needed to the interface to compile.
   # - with "dirprot" swig will attemp to wrap all the public and protected methods at once.
-  set(SWIG_DEFS "-dirprot;-dirvtable;-Wall")
+  set(SWIG_DEFS "-dirprot;-dirvtable;-Wextra")
   
   if(WITH_FCLIB)
     set(SWIG_DEFS "${SWIG_DEFS};-DWITH_FCLIB")
@@ -106,16 +113,15 @@ if(WITH_PYTHON_WRAPPER)
   # The file __init__.py will be generated from __init__.py.in.
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py.in)
     message(STATUS "Generate __init__.py file ...")
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${SICONOS_PYTHON_PACKAGE}/__init__.py)
-      file(REMOVE ${CMAKE_CURRENT_SOURCE_DIR}/${SICONOS_PYTHON_PACKAGE}/__init__.py)
+    if(EXISTS ${SICONOS_SWIG_ROOT_DIR}/__init__.py)
+      file(REMOVE ${SICONOS_SWIG_ROOT_DIR}/__init__.py)
     endif()
-    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/__init__.py.in
-      ${SICONOS_PYTHON_PACKAGE}/__init__.py)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/__init__.py.in ${SICONOS_SWIG_ROOT_DIR}/__init__.py)
   endif()
 
   # Some python files, that do not depend on siconos
   # but may be useful ...
-  file(GLOB pyfiles ${CMAKE_CURRENT_SOURCE_DIR}/utils/*.py)
+  file(GLOB pyfiles ${CMAKE_CURRENT_SOURCE_DIR}/utils/[^_]*.py)
   foreach(_file ${pyfiles})
     get_filename_component(_filename ${_file} NAME)
     configure_file(utils/${_filename} ${SICONOS_SWIG_ROOT_DIR}/${_filename} COPYONLY)

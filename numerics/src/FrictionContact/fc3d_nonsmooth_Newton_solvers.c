@@ -1,10 +1,29 @@
-/* Factorisation with Newton_Methods.c is needed */
+/* Siconos is a program dedicated to modeling, simulation and control
+ * of non smooth dynamical systems.
+ *
+ * Copyright 2016 INRIA.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
+/* Factorisation with Newton_methods.c is needed */
 
 #include "fc3d_nonsmooth_Newton_solvers.h"
 
 #include "NumericsMatrix_private.h"
 
-#define DEBUG_MESSAGES 1
+/* #define DEBUG_MESSAGES */
+/* #define DEBUG_STDOUT */
 #include "debug.h"
 #include "op3x3.h"
 #include "SparseBlockMatrix.h"
@@ -18,15 +37,35 @@
 #include <assert.h>
 #include "Friction_cst.h"
 #include "SiconosLapack.h"
-
+#include "NumericsSparseMatrix.h"
 #include "sanitizer.h"
+#include "numerics_verbose.h"
 
-void computeDenseAWpB(
-  double *A,
-  NumericsMatrix *W,
-  double *B,
-  NumericsMatrix *AWpB);
-void computeDenseAWpB(
+static void NM_dense_to_sparse_diag_t(double* A, NumericsMatrix* B, size_t block_row_size, size_t block_col_size)
+{
+  /* TODO  CSC, CSR version*/
+  assert(A);
+  if(!B->matrix2->triplet) NM_triplet_alloc(B, block_row_size*block_col_size);
+  CSparseMatrix* Btriplet = B->matrix2->triplet;
+  B->matrix2->origin = NS_TRIPLET;
+  double* Alocal = A;
+  for (size_t i = 0, j = 0; i < (size_t)B->size0; i += block_row_size, j+= block_col_size)
+  {
+    {
+      for (size_t col_indx = j; col_indx < block_col_size+j; ++col_indx)
+      {
+        for (size_t row_indx = i; row_indx < block_row_size+i; ++row_indx, ++Alocal)
+        {
+          CHECK_RETURN(cs_zentry(Btriplet, row_indx, col_indx, *Alocal));
+        }
+//        Alocal = ;
+      }
+//      Alocal = A + block_row_size*block_col_size;
+    }
+  }
+}
+
+static void computeDenseAWpB(
   double *A,
   NumericsMatrix *W,
   double *B,
@@ -35,10 +74,12 @@ void computeDenseAWpB(
   unsigned problemSize = W->size0;
 
   double* result = AWpB->matrix0;
-
   double* Wx = W->matrix0;
+  assert(result);
+  assert(Wx);
 
   assert(problemSize >= 3);
+
 
   double Wij[9], Ai[9], Bi[9], tmp[9];
 
@@ -63,13 +104,7 @@ void computeDenseAWpB(
   }
 }
 
-void computeSparseAWpB(
-  double *A,
-  NumericsMatrix *W,
-  double *B,
-  NumericsMatrix *AWpB);
-
-void computeSparseAWpB(
+static void computeSparseBlockAWpB(
   double *A,
   NumericsMatrix *W,
   double *B,
@@ -79,6 +114,15 @@ void computeSparseAWpB(
   /* unsigned int problemSize = W->size0; */
 
   SparseBlockStructuredMatrix* Wb = W->matrix1;
+  SparseBlockStructuredMatrix* result = AWpB->matrix1;
+  assert(Wb);
+  assert(result);
+
+  /* Check for not allocated matrix  */
+  if (result->nbblocks != Wb->nbblocks)
+  {
+    NM_copy(W, AWpB);
+  }
 
   assert((unsigned)W->size0 >= 3);
   assert((unsigned)W->size0 / 3 >= Wb->filled1 - 1);
@@ -102,49 +146,73 @@ void computeSparseAWpB(
       mm3x3(Ai, Wb->block[blockn], tmp);
       if (col == row) add3x3(Bi, tmp);
 
-      cpy3x3(tmp, AWpB->matrix1->block[blockn]);
+      cpy3x3(tmp, result->block[blockn]);
     }
   }
   /* Invalidation of sparse storage, if any. */
-  if (AWpB->matrix2)
-  {
-    if (AWpB->matrix2->triplet)
-    {
-      cs_spfree(AWpB->matrix2->triplet);
-      AWpB->matrix2->triplet = NULL;
-    }
-    if (AWpB->matrix2->csc)
-    {
-      cs_spfree(AWpB->matrix2->csc);
-      AWpB->matrix2->csc = NULL;
-    }
-    if (AWpB->matrix2->trans_csc)
-    {
-      cs_spfree(AWpB->matrix2->trans_csc);
-      AWpB->matrix2->trans_csc = NULL;
-    }
-  }
+  NM_clearSparseStorage(AWpB);
+}
+
+static void computeSparseAWpB(
+  double *A,
+  NumericsMatrix *W,
+  double *B,
+  NumericsMatrix *AWpB)
+{
+  unsigned problemSize = W->size0;
+  assert(problemSize >= 3);
+
+  assert(AWpB->matrix2);
+  assert(W->matrix2);
+
+
+  NM_clearSparseStorage(AWpB);
+  NumericsMatrix* Amat = NM_create(NM_SPARSE, problemSize, problemSize);
+  NumericsMatrix* Bmat = NM_create(NM_SPARSE, problemSize, problemSize);
+
+  NM_dense_to_sparse_diag_t(A, Amat, 3, 3);
+  NM_dense_to_sparse_diag_t(B, Bmat, 3, 3);
+
+  /* AWpB = B */
+  NM_copy(Bmat, AWpB);
+
+  /*  AWpB += AW */
+  NM_gemm(1., Amat, W, 1., AWpB);
+
+  NM_free(Amat);
+  NM_free(Bmat);
+  free(Amat);
+  free(Bmat);
 }
 
 void computeAWpB(
   double *A,
   NumericsMatrix *W,
   double *B,
-  NumericsMatrix *AWpB);
-void computeAWpB(
-  double *A,
-  NumericsMatrix *W,
-  double *B,
   NumericsMatrix *AWpB)
 {
-  if (W->storageType == NM_DENSE)
+  switch (W->storageType)
+  {
+  case NM_DENSE:
   {
     computeDenseAWpB(A, W, B, AWpB);
+    break;
   }
-  else
+  case NM_SPARSE_BLOCK:
   {
-    assert (W->storageType == NM_SPARSE_BLOCK);
+    computeSparseBlockAWpB(A, W, B, AWpB);
+    break;
+  }
+  case NM_SPARSE:
+  {
     computeSparseAWpB(A, W, B, AWpB);
+    break;
+  }
+  default:
+  {
+    printf("computeAWpB :: Unsupported storage type %d, exiting!\n", W->storageType);
+    exit(EXIT_FAILURE);
+  }
   }
 }
 
@@ -347,7 +415,7 @@ int frictionContactFBLSA(
   // - F contains FB or grad FB merit
   // - tmp contains direction, scal*direction, reaction+scal*direction
 
-  // cf Newton_Methods.c, L59
+  // cf Newton_methods.c, L59
   double p = 2.1;
   double fblsa_rho = 1e-8;
   double gamma = 1e-4;
@@ -498,34 +566,23 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
   unsigned int itermax = options->iparam[0];
   unsigned int erritermax = options->iparam[7];
 
-  int nzmax;
-
-  if (problem->M->storageType == NM_DENSE)
-  {
-    nzmax = problemSize * problemSize;
-  }
-  else
-  {
-    nzmax = options->iparam[3];
-  }
-
   assert(itermax > 0);
-  assert(nzmax > 0);
+
 
   double tolerance = options->dparam[0];
   assert(tolerance > 0);
-  
+
   if (verbose > 0)
     printf("------------------------ FC3D - _nonsmooth_Newton_solversSolve - Start with tolerance = %g\n", tolerance);
 
   unsigned int _3problemSize = 3 * problemSize;
-  double normq = cblas_dnrm2(problemSize , problem->q , 1);
- 
+  double norm_q = cblas_dnrm2(problemSize , problem->q , 1);
+
   void *buffer;
 
   if (!options->dWork)
   {
-    buffer = malloc((11 * problemSize) * sizeof(double)); // F(1),
+    buffer = calloc((11 * problemSize) , sizeof(double)); // F(1),
                                                           // tmp1(1),
                                                           // tmp2(1),
                                                           // tmp3(1),
@@ -544,19 +601,15 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
   double *Bx = Ax + _3problemSize;
   double *rho = Bx + _3problemSize;
 
-  NumericsMatrix *AWpB, *AWpB_backup;
+  NumericsMatrix *AWpB;
   if (!options->dWork)
   {
-    AWpB = createNumericsMatrix(problem->M->storageType,
-        problem->M->size0, problem->M->size1);
-
-    AWpB_backup = createNumericsMatrix(problem->M->storageType,
+    AWpB = NM_create(problem->M->storageType,
         problem->M->size0, problem->M->size1);
   }
   else
   {
     AWpB = (NumericsMatrix*) (rho + problemSize);
-    AWpB_backup = (NumericsMatrix*) (AWpB + sizeof(NumericsMatrix*));
   }
 
   /* just for allocations */
@@ -593,21 +646,21 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
         }
       default:
         {
-          fprintf(stderr, "fc3d esolve: unknown linear solver.\n");
-          return;
+          numerics_error("fc3d_nonsmooth_Newton_solvers_solve", "Unknown linear solver.\n");
         }
     }
   }
 
   // compute rho here
-  for (unsigned int i = 0; i < problemSize; ++i) rho[i] = options->dparam[3];
+  assert(options->dparam[SICONOS_FRICTION_3D_NSN_RHO]>0.0);
+  for (unsigned int i = 0; i < problemSize; ++i) rho[i] = options->dparam[SICONOS_FRICTION_3D_NSN_RHO];
 
   // velocity <- M*reaction + qfree
   cblas_dcopy(problemSize, problem->q, 1, velocity, 1);
   NM_gemv(1., problem->M, reaction, 1., velocity);
-  
+
   double linear_solver_residual=0.0;
-  
+
   while (iter++ < itermax)
   {
 
@@ -616,7 +669,6 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
                        reaction, velocity, equation->problem->mu,
                        rho,
                        F, Ax, Bx);
-
     // AW + B
     computeAWpB(Ax, problem->M, Bx, AWpB);
 
@@ -624,17 +676,18 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
     cblas_dscal(problemSize, -1., tmp1, 1);
 
     /* Solve: AWpB X = -F */
-    NM_copy(AWpB, AWpB_backup);
-    int lsi = NM_gesv(AWpB, tmp1);
+//    NM_copy(AWpB, AWpB_backup);
+    int lsi = NM_gesv(AWpB, tmp1, true);
 
     /* NM_copy needed here */
-    NM_copy(AWpB_backup, AWpB);
+//    NM_copy(AWpB_backup, AWpB);
 
     if (lsi)
     {
       if (verbose > 0)
       {
-        fprintf(stderr, "fc3d esolve: warning! linear solver exit with code = %d\n", lsi);
+        numerics_warning("fc3d_nonsmooth_Newton_solvers_solve -",
+                         "warning! linear solver exit with code = %d\n", lsi);
       }
     }
 
@@ -672,10 +725,9 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
       break;
     default:
       {
-        fprintf(stderr, "fc3d esolve: unknown line search option.\n");
-        return;
+        numerics_error("fc3d_nonsmooth_Newton_solvers_solve",
+                       "Unknown line search option.\n");
       }
-
     }
 
     if (!info_ls)
@@ -684,7 +736,6 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
       cblas_dcopy(problemSize, tmp2, 1, reaction, 1);
     else
       cblas_daxpy(problemSize, 1., tmp3, 1., reaction, 1);
-
 
     // velocity <- M*reaction + qfree
     cblas_dcopy(problemSize, problem->q, 1, velocity, 1);
@@ -697,7 +748,7 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
 
       fc3d_compute_error(problem, reaction, velocity,
 //      fc3d_FischerBurmeister_compute_error(problem, reaction, velocity,
-                         tolerance, options, normq, &(options->dparam[1]));
+                         tolerance, options, norm_q, &(options->dparam[1]));
 
       DEBUG_EXPR_WE(equation->function(equation->data, problemSize,
                                        reaction, velocity, equation->problem->mu, rho,
@@ -753,7 +804,7 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
     }
   }
 
-  options->iparam[1] = iter;
+  options->iparam[SICONOS_IPARAM_ITER_DONE] = iter;
 
   if (!options->dWork)
   {
@@ -768,11 +819,9 @@ void fc3d_nonsmooth_Newton_solvers_solve(fc3d_nonsmooth_Newton_solvers* equation
 
   if (!options->dWork)
   {
-    freeNumericsMatrix(AWpB);
-    freeNumericsMatrix(AWpB_backup);
+    NM_free(AWpB);
 
     free(AWpB);
-    free(AWpB_backup);
   }
   if (verbose > 0)
     printf("------------------------ FC3D - NSN - End\n");

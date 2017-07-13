@@ -22,9 +22,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
-
 #include "MixedLinearComplementarityProblem.h"
-#include "misc.h"
+#include "NumericsMatrix.h"
+#include "numerics_verbose.h"
 
 void mixedLinearComplementarity_display(MixedLinearComplementarityProblem* p)
 {
@@ -175,7 +175,7 @@ int mixedLinearComplementarity_printInFile(MixedLinearComplementarityProblem* pr
       fprintf(file, "%d ", problem->blocksIsComp[i]);
     }
     fprintf(file, "\n");
-    printInFile(problem->M, file);
+    NM_write_in_file(problem->M, file);
 
     for (i = 0; i < problem->M->size1; i++)
     {
@@ -291,8 +291,8 @@ int mixedLinearComplementarity_newFromFile(MixedLinearComplementarityProblem* pr
     }
 
     //fprintf(file,"\n");
-    problem->M = newNumericsMatrix();
-    newFromFile(problem->M, file);
+    problem->M = NM_new();
+    NM_new_from_file(problem->M, file);
     problem->q = (double *) malloc(problem->M->size1 * sizeof(double));
 
     for (i = 0; i < problem->M->size1; i++)
@@ -402,7 +402,7 @@ int mixedLinearComplementarity_newFromFileOld(MixedLinearComplementarityProblem*
 
 
 
-  problem->M = createNumericsMatrixFromData(NM_DENSE, NbLines, n + m, vecM);
+  problem->M = NM_create_from_data(NM_DENSE, NbLines, n + m, vecM);
 
   problem->isStorageType1 = 1; // Both problems seems to be stored
   problem->isStorageType2 = 1; // Both problems seems to be stored
@@ -494,7 +494,7 @@ void freeMixedLinearComplementarityProblem(MixedLinearComplementarityProblem* pr
 {
   if (problem->isStorageType1)
   {
-    freeNumericsMatrix(problem->M);
+    NM_free(problem->M);
     free(problem->M);
     free(problem->q);
     free(problem->blocksRows);
@@ -510,5 +510,29 @@ void freeMixedLinearComplementarityProblem(MixedLinearComplementarityProblem* pr
     free(problem->b);
   }
   free(problem);
+}
+
+MixedLinearComplementarityProblem* newMLCP(void)
+{
+  MixedLinearComplementarityProblem* mlcp = (MixedLinearComplementarityProblem*) malloc(sizeof(MixedLinearComplementarityProblem));
+
+  mlcp->isStorageType1 = 0;
+  mlcp->isStorageType2 = 0;
+  mlcp->m = 0;
+  mlcp->n = 0;
+
+  mlcp->blocksRows = NULL;
+  mlcp->blocksIsComp = NULL;
+
+  mlcp->M = NULL;
+  mlcp->q = NULL;
+  mlcp->A = NULL;
+  mlcp->B = NULL;
+  mlcp->C = NULL;
+  mlcp->D = NULL;
+  mlcp->a = NULL;
+  mlcp->b = NULL;
+
+  return mlcp;
 }
 #endif

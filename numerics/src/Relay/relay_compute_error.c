@@ -17,12 +17,13 @@
 */
 
 #include "SiconosBlas.h"
-#include "NumericsOptions.h" // for global options
 #include "RelayProblem.h"
 
 #include "Relay_Solvers.h"
 
 #include "sanitizer.h"
+#include "numerics_verbose.h"
+#include "NumericsMatrix.h"
 
 void project_on_box(int n, double* restrict z, double* restrict lb, double* restrict ub)
 {
@@ -44,7 +45,7 @@ int relay_compute_error(RelayProblem* problem, double* restrict z , double* rest
   /* Computes w = Mz + q */
   int n = problem->size;
   cblas_dcopy(n , problem->q , 1 , w , 1);  // w <-q
-  prodNumericsMatrix(n, n, 1.0, problem->M, z, 1.0, w);
+  NM_gemv(1.0, problem->M, z, 1.0, w);
   double * ztmp = (double*)malloc(n * sizeof(double));
   cblas_dcopy_msan(n , z , 1 , ztmp, 1);  // ztmp <-z
 
@@ -59,8 +60,8 @@ int relay_compute_error(RelayProblem* problem, double* restrict z , double* rest
 
 
   /* Computes error */
-  double normq = cblas_dnrm2(n , problem->q , 1);
-  *error = *error / (normq + 1.0);
+  double norm_q = cblas_dnrm2(n , problem->q , 1);
+  *error = *error / (norm_q + 1.0);
   free(ztmp);
   if (*error > tolerance)
   {

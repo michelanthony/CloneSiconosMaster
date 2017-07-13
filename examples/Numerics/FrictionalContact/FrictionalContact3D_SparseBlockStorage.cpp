@@ -55,6 +55,14 @@
 */
 
 #include "SiconosNumerics.h"
+#include "GlobalFrictionContactProblem.h"
+#include "FrictionContactProblem.h"
+#include "NumericsMatrix.h"
+#include "NumericsSparseMatrix.h"
+#include "SparseBlockMatrix.h"
+#include "SolverOptions.h"
+#include "Friction_cst.h"
+#include "fc3d_Solvers.h"
 
 int main(int argc, char* argv[])
 {
@@ -105,18 +113,10 @@ int main(int argc, char* argv[])
 
   // Unknown Declaration
 
-  double *reaction = (double*)malloc(3 * NC * sizeof(double));
-  double *velocity = (double*)malloc(3 * NC * sizeof(double));
-  for (int i = 0; i < 3 * NC; i++)
-  {
-    reaction[i] = 0.0;
-    velocity[i] = 0.0;
-  }
-  // Numerics and Solver Options
+  double *reaction = (double*)calloc(3 * NC, sizeof(double));
+  double *velocity = (double*)calloc(3 * NC, sizeof(double));
 
-  NumericsOptions numerics_options;
-  numerics_options.verboseMode = 2; // turn verbose mode to off by default
-
+  // Solver Options
 
 
   //Driver call
@@ -131,8 +131,8 @@ int main(int argc, char* argv[])
 
 
   int info = fc3d_driver(&NumericsProblem,
-                                      reaction , velocity,
-                                      numerics_solver_options, &numerics_options);
+			 reaction , velocity,
+			 numerics_solver_options);
 
 
   solver_options_delete(numerics_solver_options);

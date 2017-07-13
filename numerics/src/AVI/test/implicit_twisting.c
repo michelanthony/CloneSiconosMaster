@@ -29,7 +29,7 @@
 #include "AVI_Solvers.h"
 #include "AVI_cst.h"
 #include "SiconosSets.h"
-
+#include "NumericsMatrix.h"
 #define TS 10e-3
 #define NB_ITER 10000
 #define TOL_NC 1e-12
@@ -42,15 +42,19 @@ int main(void)
   x[0] = 50*erand48(xsubi1);
   x[1] = 50*erand48(xsubi2);
   /* column major */
-  double H[8] = {1.0, -TS/2.0, -1.0, TS/2.0, 0.0, 1.0, 0.0, -1.0};
+  double Hdat[8] = {1.0, -TS/2.0, -1.0, TS/2.0, 0.0, 1.0, 0.0, -1.0};
   double K[4] = {-1.0, -1.0, -1.0, -1.0};
+
+  NumericsMatrix H;
+  NM_null(&H);
+  NM_fill(&H, NM_DENSE, 4, 2, Hdat);
 
   double v1[] = {-1.0, -1.0 -TS/2.0};
   double v2[] = {-1.0, 1.0 -TS/2.0};
   double v3[] = {1.0, 1.0 + TS/2.0};
   double v4[] = {1.0, -1.0 + TS/2.0};
 
-  polyhedron poly = { SICONOS_SET_POLYHEDRON, 4, 0, H, K, NULL, NULL };
+  polyhedron poly = { SICONOS_SET_POLYHEDRON, 4, 0, &H, K, NULL, NULL };
 
   /* twisting gain */
   double G = 10;
@@ -58,7 +62,7 @@ int main(void)
   NumericsMatrix num_mat;
   double M[4] = { G*TS*TS/2.0, G*TS, beta*G*TS*TS/2.0, beta*G*TS };
   NM_null(&num_mat);
-  fillNumericsMatrix(&num_mat, NM_DENSE, 2, 2, M);
+  NM_fill(&num_mat, NM_DENSE, 2, 2, M);
 
   double q[2] = { x[0] + TS*x[1], x[1] };
 
@@ -67,7 +71,7 @@ int main(void)
     .M = &num_mat,
     .q = q,
     .d = NULL,
-    .poly = &poly
+    .poly.split = &poly
   };
 
   SolverOptions options;

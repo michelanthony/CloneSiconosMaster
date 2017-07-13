@@ -16,7 +16,7 @@ mu = np.array([0.1])
 
 reactions = np.array([0., 0., 0.])
 velocities = np.array([0., 0., 0.])
-sn.setNumericsVerbose(2)
+sn.numerics_set_verbose(2)
 FCP = sn.FrictionContactProblem(3, M, q, mu)
 
 
@@ -26,7 +26,7 @@ def solve(problem, solver, options):
     reactions[...] = 0.0
     velocities[...] = 0.0
     r = solver(problem, reactions, velocities, options)
-    assert options.dparam[1] < 1e-10
+    assert options.dparam[1] < options.dparam[0]
     assert not r
 
 

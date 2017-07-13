@@ -22,7 +22,7 @@
 
 /** \enum VI_SOLVER VI_cst.h
  * Enum that allows one to encode the list of solvers in a proper to avoid mispelling
- * with char * variables
+ * with const char* const  variables
  */
 enum VI_SOLVER
 {
@@ -34,11 +34,25 @@ enum VI_SOLVER
   SICONOS_VI_BOX_PATH = 1022
 };
 
-extern char *  SICONOS_VI_EG_STR ;
-extern char *  SICONOS_VI_FPP_STR ;
-extern char *  SICONOS_VI_HP_STR ;
-extern char *  SICONOS_VI_BOX_QI_STR ;
-extern char *  SICONOS_VI_BOX_AVI_LSA_STR ;
-extern char *  SICONOS_VI_BOX_PATH_STR ;
+enum SICONOS_VI_ERROR_EVALUATION_ENUM
+{
+  /** index in iparam to store the error evaluation method */
+  SICONOS_VI_ERROR_EVALUATION = 7,
+  SICONOS_VI_ERROR_EVALUATION_FULL = 0,
+  SICONOS_VI_ERROR_EVALUATION_LIGHT_WITH_FULL_FINAL = 1,
+  SICONOS_VI_ERROR_EVALUATION_LIGHT = 2,
+  SICONOS_VI_ERROR_EVALUATION_ADAPTIVE =3,
+  /** index in iparam to store the frequency of error evaluation method */
+  SICONOS_VI_ERROR_EVALUATION_FREQUENCY = 8 
+};
+
+
+
+extern const char* const   SICONOS_VI_EG_STR ;
+extern const char* const   SICONOS_VI_FPP_STR ;
+extern const char* const   SICONOS_VI_HP_STR ;
+extern const char* const   SICONOS_VI_BOX_QI_STR ;
+extern const char* const   SICONOS_VI_BOX_AVI_LSA_STR ;
+extern const char* const   SICONOS_VI_BOX_PATH_STR ;
 
 #endif

@@ -1,3 +1,21 @@
+/* Siconos is a program dedicated to modeling, simulation and control
+ * of non smooth dynamical systems.
+ *
+ * Copyright 2016 INRIA.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
+
 
 #include "lumod_wrapper.h"
 #include <stdlib.h>
@@ -93,7 +111,7 @@ SN_lumod_dense_data* SN_lumod_dense_allocate(unsigned n, unsigned maxmod)
   /* H matrix */
   lumod_data->LU_H = &data[current_pointer];
   current_pointer += size_H;
-  lumod_data->ipiv_LU_H = (int*)malloc(n*sizeof(int));
+  lumod_data->ipiv_LU_H = (lapack_int*)malloc(n*sizeof(lapack_int));
   lumod_data->factorized_basis = (unsigned*)malloc((4*n+2)*sizeof(unsigned));
   lumod_data->row_col_indx = (int*)malloc((2*n+1)*sizeof(int));
 
@@ -155,7 +173,7 @@ int SN_lumod_dense_solve(SN_lumod_dense_data* restrict lumod_data, double* restr
   unsigned n = lumod_data->n;
   unsigned k = lumod_data->k;
   unsigned maxmod = lumod_data->maxmod;
-  int infoLAPACK = 0;
+  lapack_int infoLAPACK = 0;
 
   /*  Step 1. */
   DEBUG_PRINT_VEC_STR("col", x, n);
@@ -261,7 +279,7 @@ int SN_lumod_factorize(SN_lumod_dense_data* restrict lumod_data, unsigned* restr
   DEBUG_PRINT_MAT_STR("basis for factorization", H, n, n);
 
   /*  Compute LU factorisation of basis */
-  int infoDGETRF = 0;
+  lapack_int infoDGETRF = 0;
   DGETRF(n, n, H, n, lumod_data->ipiv_LU_H, &infoDGETRF);
   if (infoDGETRF > 0)
   {

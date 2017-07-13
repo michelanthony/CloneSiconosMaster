@@ -67,7 +67,9 @@
 #ifndef VARIATIONALINEQUALITY_H
 #define VARIATIONALINEQUALITY_H
 
-#include "NumericsMatrix.h"
+#include "NumericsFwd.h"
+#include <stdio.h>
+#include "SiconosConfig.h"
 
 typedef void * (FVIPtr)(void*, double *, double *);
 typedef void (*ptrFunctionVI)(void *self, int n, double* x, double* fx);
@@ -77,7 +79,7 @@ typedef void (*ptrFunctionVI_nabla)(void *self, int n, double* x, NumericsMatrix
 /** \struct VariationalInequality VariationalInequality.h
  * 
  */
-typedef struct VariationalInequality_
+struct VariationalInequality
 {
   int size; /**< size of the VI \f$ n \f$ */
   void *env; /**< pointer onto env object (which is self is the simplest case)*/
@@ -90,7 +92,7 @@ typedef struct VariationalInequality_
    * By default, set istheNormVIset =0 */
   void* set; /**< opaque struct that represent the set K (possibly empty) */
   NumericsMatrix* nabla_F; /**< storage for \f$\nabla_x F\f$*/
-} VariationalInequality;
+};
 
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
@@ -98,28 +100,28 @@ extern "C"
 {
 #endif
   /** display a VariationalInequalityProblem
-   * \param problem the problem to display
+   * \param vi the problem to display
    */
-  void variationalInequality_display(VariationalInequality*  problem);
+  void variationalInequality_display(VariationalInequality*  vi);
 
   /** print a VariationalInequalityProblem in a file (numerics .dat format)
-   * \param problem the problem to print out
+   * \param vi the problem to print out
    * \param file the dest file
    * \return ok if successfull
    */
-  int variationalInequality_printInFile(VariationalInequality*  problem, FILE* file);
+  int variationalInequality_printInFile(VariationalInequality*  vi, FILE* file);
 
   /** read a VariationalInequalityProblem in a file (numerics .dat format)
-   * \param problem the problem to read
+   * \param vi the problem to read
    * \param file the target file
    * \return ok if successfull
    */
-  int variationalInequality_newFromFile(VariationalInequality*  problem, FILE* file);
+  int variationalInequality_newFromFile(VariationalInequality*  vi, FILE* file);
 
   /** free a VariationalInequalityProblem
-   * \param problem the problem to free
+   * \param vi the problem to free
    */
-  void freeVariationalInequalityProblem(VariationalInequality* problem);
+  void freeVariationalInequalityProblem(VariationalInequality* vi);
 
   /** Clear VariationalInequality structure: set all pointeurs to NULL, double and int to 0.
    * \param vi the problem to clear
@@ -132,13 +134,18 @@ extern "C"
     */
   VariationalInequality* variationalInequality_new(int size);
 
+  /** new VariationalInequality problem
+    * \return an empty VI
+    */
+  VariationalInequality* newVI(void);
+
   /** get the environment from the struct
-   * \param problem a VariationalInequality problem
+   * \param vi a VariationalInequality problem
    * \return the environment from the struct
    */
-  static inline void* VI_get_env(void* problem)
+  static inline void* VI_get_env(void* vi)
   {
-    return ((VariationalInequality*) problem)->env;
+    return ((VariationalInequality*) vi)->env;
   }
 
 

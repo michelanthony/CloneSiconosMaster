@@ -1,6 +1,24 @@
+/* Siconos is a program dedicated to modeling, simulation and control
+ * of non smooth dynamical systems.
+ *
+ * Copyright 2016 INRIA.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+*/
 
 #include <stdio.h>
 #include "hdf5_logger.h"
+#include "NumericsSparseMatrix.h"
 
 #ifdef WITH_HDF5
 
@@ -413,6 +431,22 @@ bool SN_logh5_vec_int64(size_t size, int64_t* vec, const char* name, hid_t loc_i
   return !status ? true : false;
 }
 
+bool SN_logh5_vec_uint64(size_t size, uint64_t* vec, const char* name, hid_t loc_id)
+{
+  assert(loc_id);
+  assert(vec);
+  assert(name);
+
+  hsize_t dims[1] = {size};
+  hid_t type = H5T_NATIVE_UINT_LEAST64;
+  herr_t status;
+
+  hid_t space =  H5Screate_simple(1, dims, NULL);
+  status = SN_logh5_write_dset(loc_id, name, type, space, vec);
+  status = H5Sclose(space);
+
+  return !status ? true : false;
+}
 #else /* WITH_HDF5 */
 
 bool SN_logh5_check_gzip(void)
@@ -493,5 +527,10 @@ bool SN_logh5_vec_int64(size_t size, int64_t* vec, const char* name, hid_t loc_i
   return false;
 }
 
+bool SN_logh5_vec_uint64(size_t size, uint64_t* vec, const char* name, hid_t loc_id)
+{
+  fprintf(stderr, "SN_logh5 :: Siconos/Numerics has been compiled with no HDF5 support!\n");
+  return false;
+}
 
 #endif /*  WITH_HDF5 */

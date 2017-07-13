@@ -88,9 +88,11 @@
 %ignore getWMap;
 %ignore getWBoundaryConditionsMap;
 %ignore getDSBlocks;
-%ignore getInvMSimple;
 %ignore getInvMBlock;
 
+%warnfilter(509) rotateAbsToBody;
+%warnfilter(509) changeFrameAbsToBody;
+%warnfilter(509) changeFrameBodyToAbs;
 
 
  // common declarations with upper modules : Mechanics, IO, ...
@@ -140,19 +142,18 @@ namespace std
 // yes, undefined private copy constructors
 %feature("notabstract") TimeStepping;
 %feature("notabstract") TimeSteppingCombinedProjection;
+%feature("notabstract") TimeSteppingDirectProjection;
 %feature("notabstract") EventDriven;
 
 // common declarations with Numerics
 
 // note : solver_options_delete is call by ~LCP(), ~FrictionContact(), etc.
-%shared_ptr(_SolverOptions);
-%shared_ptr(NumericsOptions);
+%shared_ptr(SolverOptions);
 %shared_ptr(NumericsMatrix);
 %shared_ptr(CSparseMatrix);
 %shared_ptr(SparseBlockStructuredMatrix);
 %shared_ptr(GlobalFrictionContactProblem);
 
-%import NumericsOptions.h
 %include solverOptions.i
 
 // access NumericsMatrix cf Numerics.i
@@ -216,8 +217,6 @@ namespace std
 
 %include "SimulationTypeDef.hpp"
 
-%include "SiconosSet.hpp"
-
 %import "boost/config.hpp"
 %import "boost/graph/graph_utility.hpp"
 
@@ -265,6 +264,16 @@ typedef __mpz_struct mpz_t[1];
   SP::NewtonImpactFrictionNSL cast_NewtonImpactFrictionNSL(SP::NonSmoothLaw nslaw)
   {
     return std11::dynamic_pointer_cast<NewtonImpactFrictionNSL>(nslaw);
+  }
+
+  SP::RelayNSL cast_RelayNSL(SP::NonSmoothLaw nslaw)
+  {
+    return std11::dynamic_pointer_cast<RelayNSL>(nslaw);
+  }
+
+  SP::NewtonImpactNSL cast_NewtonImpactNSL(SP::NonSmoothLaw nslaw)
+  {
+    return std11::dynamic_pointer_cast<NewtonImpactNSL>(nslaw);
   }
 
 %}

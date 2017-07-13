@@ -21,9 +21,14 @@
 #include <math.h>
 #include <float.h>
 
+#include "LinearComplementarityProblem.h"
 #include "LCP_Solvers.h"
+#include "lcp_cst.h"
+#include "SolverOptions.h"
+#include "NumericsMatrix.h"
+
 #include "SiconosLapack.h"
-#include "Newton_Methods.h"
+#include "Newton_methods.h"
 #include "FischerBurmeister.h"
 #include "min_merit.h"
 #include "lcp_newton_FB.h"

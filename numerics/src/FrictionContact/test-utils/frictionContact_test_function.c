@@ -19,15 +19,18 @@
 #include <stdlib.h>
 #include "NonSmoothDrivers.h"
 #include "frictionContact_test_function.h"
-
+#include "fc3d_Solvers.h"
+#include "gfc3d_Solvers.h"
+#include "Friction_cst.h"
 #if defined(WITH_FCLIB)
 #include <fclib.h>
 #include <fclib_interface.h>
 #endif
-
+#include "numerics_verbose.h"
 
 void frictionContact_test_gams_opts(SN_GAMSparams* GP, int solverId)
 {
+#ifdef HAVE_GAMS_C_API
   if (solverId == SICONOS_FRICTION_3D_GAMS_PATHVI ||
       solverId == SICONOS_FRICTION_3D_GAMS_LCP_PATHVI ||
       solverId == SICONOS_GLOBAL_FRICTION_3D_GAMS_PATHVI
@@ -64,7 +67,7 @@ void frictionContact_test_gams_opts(SN_GAMSparams* GP, int solverId)
   add_GAMS_opt_int(GP, "minor_iteration_limit", 100000, GAMS_OPT_SOLVER);
   add_GAMS_opt_int(GP, "major_iteration_limit", 20, GAMS_OPT_SOLVER);
   add_GAMS_opt_double(GP, "expand_delta", 1e-10, GAMS_OPT_SOLVER);
-
+#endif
 }
 
 int frictionContact_test_function(FILE * f, SolverOptions * options)
@@ -72,17 +75,11 @@ int frictionContact_test_function(FILE * f, SolverOptions * options)
 
   int k, info = -1 ;
   FrictionContactProblem* problem = (FrictionContactProblem *)malloc(sizeof(FrictionContactProblem));
-
+  /* numerics_set_verbose(1); */
   info = frictionContact_newFromFile(problem, f);
 
   FILE * foutput  =  fopen("checkinput.dat", "w");
   info = frictionContact_printInFile(problem, foutput);
-
-  NumericsOptions global_options;
-  setDefaultNumericsOptions(&global_options);
-  global_options.verboseMode = 1; // turn verbose mode to off by default
-
-
 
   solver_options_print(options);
   int NC = problem->numberOfContacts;
@@ -95,14 +92,14 @@ int frictionContact_test_function(FILE * f, SolverOptions * options)
   if (dim == 2)
   {
     info = fc2d_driver(problem,
-                                    reaction , velocity,
-                                    options, &global_options);
+		       reaction , velocity,
+		       options);
   }
   else if (dim == 3)
   {
     info = fc3d_driver(problem,
-                                    reaction , velocity,
-                                    options, &global_options);
+		       reaction , velocity,
+		       options);
   }
   else
   {
@@ -142,7 +139,7 @@ int frictionContact_test_function(FILE * f, SolverOptions * options)
   }
   else
   {
-    printf("test unsuccessful, residual = %g\n", options->dparam[1]);
+    printf("test unsuccessful, residual = %g, info = %d, nb iter = %d\n", options->dparam[1], info, options->iparam[1] ? options->iparam[1] : options->iparam[7]);
   }
   free(reaction);
   free(velocity);
@@ -167,11 +164,6 @@ int frictionContact_test_function_hdf5(const char * path, SolverOptions * option
   FILE * foutput  =  fopen("checkinput.dat", "w");
   info = frictionContact_printInFile(problem, foutput);
 
-  
-  NumericsOptions global_options;
-  setDefaultNumericsOptions(&global_options);
-  global_options.verboseMode = 1; // turn verbose mode to off by default
-
   int NC = problem->numberOfContacts;
   int dim = problem->dimension;
   //int dim = problem->numberOfContacts;
@@ -182,14 +174,14 @@ int frictionContact_test_function_hdf5(const char * path, SolverOptions * option
   if (dim == 2)
   {
     info = fc2d_driver(problem,
-                                    reaction , velocity,
-                                    options, &global_options);
+		       reaction , velocity,
+		       options);
   }
   else if (dim == 3)
   {
     info = fc3d_driver(problem,
-                                    reaction , velocity,
-                                    options, &global_options);
+		       reaction , velocity,
+		       options);
   }
   else
   {
@@ -217,6 +209,10 @@ int frictionContact_test_function_hdf5(const char * path, SolverOptions * option
     printf("\n");
   }
 
+  for (k = 0; k < dim * NC; ++k)
+  {
+    info = info == 0 ? !(isfinite(velocity[k]) && isfinite(reaction[k])) : info;
+  }
   /* for (k = 0 ; k < dim * NC; k++) */
   /* { */
   /*   printf("Velocity[%i] = %12.8e \t \t Reaction[%i] = %12.8e\n", k, velocity[k], k , reaction[k]); */
@@ -235,83 +231,6 @@ int frictionContact_test_function_hdf5(const char * path, SolverOptions * option
   free(velocity);
 
   freeFrictionContactProblem(problem);
-  fclose(foutput);
-
-  return info;
-
-}
-
-int gfc3d_test_function_hdf5(const char* path, SolverOptions* options)
-{
-
-  int k, info = -1 ;
-
-  GlobalFrictionContactProblem* problem = globalFrictionContact_fclib_read(path);
-  FILE * foutput  =  fopen("checkinput.dat", "w");
-  info = globalFrictionContact_printInFile(problem, foutput);
-
-  NumericsOptions global_options;
-  setDefaultNumericsOptions(&global_options);
-  global_options.verboseMode = 1; // turn verbose mode to off by default
-
-  int NC = problem->numberOfContacts;
-  int dim = problem->dimension;
-  int n = problem->M->size0;
-
-  double *reaction = (double*)calloc(dim * NC, sizeof(double));
-  double *velocity = (double*)calloc(dim * NC, sizeof(double));
-  double *global_velocity = (double*)calloc(n, sizeof(double));
-
-  if (dim == 3)
-  {
-    info = gfc3d_driver(problem, reaction, velocity, global_velocity, options, &global_options);
-  }
-  else
-  {
-    fprintf(stderr, "gfc3d_test_function_hdf5 :: problem size != 3\n");
-    return 1;
-  }
-  printf("\n");
-
-  int print_size = 10;
-
-  if  (dim * NC >= print_size)
-  {
-    printf("First values (%i)\n", print_size);
-    for (k = 0 ; k < print_size; k++)
-    {
-      printf("Velocity[%i] = %12.8e \t \t Reaction[%i] = %12.8e\n", k, velocity[k], k , reaction[k]);
-    }
-    printf(" ..... \n");
-  }
-  else
-  {
-    for (k = 0 ; k < dim * NC; k++)
-    {
-      printf("Velocity[%i] = %12.8e \t \t Reaction[%i] = %12.8e\n", k, velocity[k], k , reaction[k]);
-    }
-    printf("\n");
-  }
-
-  /* for (k = 0 ; k < dim * NC; k++) */
-  /* { */
-  /*   printf("Velocity[%i] = %12.8e \t \t Reaction[%i] = %12.8e\n", k, velocity[k], k , reaction[k]); */
-  /* } */
-  /* printf("\n"); */
-
-  if (!info)
-  {
-    printf("test successful, residual = %g\n", options->dparam[1]);
-  }
-  else
-  {
-    printf("test unsuccessful, residual = %g\n", options->dparam[1]);
-  }
-  free(reaction);
-  free(velocity);
-  free(global_velocity);
-
-  freeGlobalFrictionContactProblem(problem);
   fclose(foutput);
 
   return info;

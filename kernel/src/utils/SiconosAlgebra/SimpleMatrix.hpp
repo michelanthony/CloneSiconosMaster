@@ -278,6 +278,9 @@ public:
     return _ipiv;
   }
 
+
+  bool isSymmetric(double tol) const;
+
   /** get DenseMat matrix
    *  \param row an unsigned int, position of the block - Useless for SimpleMatrix
    *  \param col an unsigned int, position of the block - Useless for SimpleMatrix
@@ -440,6 +443,17 @@ public:
    */
   void display() const;
 
+  /** put data of the matrix into a std::string
+   * \return std::string
+   */
+  std::string toString() const;
+
+  /** send data of the matrix to an ostream
+   * \param os An output stream
+   * \param sm a SimpleMatrix
+   * \return The same output stream
+   */
+  friend std::ostream& operator<<(std::ostream& os, const SimpleMatrix& sm);
 
   /** get or set the element matrix[i,j]
    *  \param i an unsigned int 

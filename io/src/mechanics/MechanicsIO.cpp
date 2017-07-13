@@ -5,9 +5,15 @@
 
 #define DUMMY(X, Y) class X : public Y {}
 
+#undef PROPOSED_CLASSES
 #undef BULLET_CLASSES
 #undef OCC_CLASSES
 #undef MECHANISMS_CLASSES
+
+#define PROPOSED_CLASSES() \
+  REGISTER(BodyDS)
+
+#include <BodyDS.hpp>
 
 #define XBULLET_CLASSES() \
   REGISTER(BulletDS)     \
@@ -65,6 +71,7 @@ DUMMY(MBTB_ContactRelation, NewtonEulerFrom1DLocalFrameR);
   REGISTER(PivotJointR)                         \
   REGISTER(KneeJointR)                          \
   REGISTER(PrismaticJointR)                     \
+  PROPOSED_CLASSES()                            \
   OCC_CLASSES()                                 \
   XBULLET_CLASSES()                             \
   MECHANISMS_CLASSES()                          \
@@ -158,7 +165,7 @@ void contactPointProcess(SiconosVector& answer,
   const SiconosVector& nc = *rel.nc();
   const SimpleMatrix& jachqT = *rel.jachqT();
   double id = inter.number();
-  double mu = ask<ForMu>(*inter.nslaw());
+  double mu = ask<ForMu>(*inter.nonSmoothLaw());
   SiconosVector cf(jachqT.size(1));
   prod(*inter.lambda(1), jachqT, cf, true);
   answer.setValue(0, mu);
@@ -300,14 +307,15 @@ SP::SimpleMatrix MechanicsIO::velocities(const Model& model) const
     (*model.nonSmoothDynamicalSystem()->topology()->dSG(0));
 }
 
-SP::SimpleMatrix MechanicsIO::contactPoints(const Model& model) const
+SP::SimpleMatrix MechanicsIO::contactPoints(const Model& model,
+                                            unsigned int index_set) const
 {
   SP::SimpleMatrix result(new SimpleMatrix());
   InteractionsGraph::VIterator vi, viend;
   if (model.nonSmoothDynamicalSystem()->topology()->numberOfIndexSet() > 0)
   {
     InteractionsGraph& graph =
-      *model.nonSmoothDynamicalSystem()->topology()->indexSet(1);
+      *model.nonSmoothDynamicalSystem()->topology()->indexSet(index_set);
     unsigned int current_row;
     result->resize(graph.vertices_number(), 14);
     for(current_row=0, std11::tie(vi,viend) = graph.vertices();

@@ -18,11 +18,73 @@
 //
 //
 
-// Siconos.i - SWIG interface for Siconos
+// numerics.i - SWIG interface for siconos numerics component.
 %module(package="siconos") numerics
 
+// basics, mostly numpy.i stuff. 
 %include start.i
 
+%include exception.i
+
+%{
+#include "tlsdef.h"
+#include "sn_error_handling.h"
+
+tlsvar char error_msg[2048];
+
+static char* format_exception_msg(const char* first_line)
+{
+  strncpy(error_msg, first_line, strlen(first_line)+1);
+  strncat(error_msg, "\n", 2);
+  const char* sn_msg = sn_fatal_error_msg();
+  strncat(error_msg, sn_msg, strlen(sn_msg) - 1);
+  return error_msg;
+}
+
+static char* format_msg_concat(const char* msg1, const char* msg2)
+{
+  strncpy(error_msg, msg1, strlen(msg1)+1);
+  strncat(error_msg, "\n", 2);
+  strncat(error_msg, msg2, strlen(msg2) - 1);
+  return error_msg;
+}
+
+%}
+
+%exception {
+/* I'm HERE */
+/* TODO implement setjmp/longjmp here  + SWIG_exception */
+  switch (SN_SETJMP_EXTERNAL_START)
+  {
+  case SN_NO_ERROR:
+  {
+    $action
+    SN_SETJMP_EXTERNAL_STOP
+    break;
+  }
+  case SN_MEMORY_ALLOC_ERROR:
+  {
+    SWIG_exception(SWIG_MemoryError, format_exception_msg("Out of memory:"));
+    break;
+  }
+  case SN_UNSUPPORTED_LINALG_OP:
+  {
+    SWIG_exception(SWIG_RuntimeError, format_exception_msg("Unsupported linear algebra operation:"));
+    break;
+  }
+  case SN_PROBLEM_NOT_PROCESSABLE:
+  {
+    SWIG_exception(SWIG_RuntimeError, format_exception_msg("The given problem is not processable:"));
+    break;
+  }
+  default:
+  {
+    SWIG_exception(SWIG_UnknownError, format_exception_msg("Unknown error! Hopefully more info follow:"));
+    break;
+  }
+  }
+
+}
 
 // generated docstrings from doxygen xml output
 %include numerics-docstrings.i
@@ -36,7 +98,7 @@
 { void* _ptr = NULL; if (!SWIG_IsOK(SWIG_ConvertPtr(var, &_ptr, SWIGTYPE_p_##type_, 0 |  0 ))) {
     char errmsg[1024];
     snprintf(errmsg, sizeof(errmsg), "Argument check failed! Argument %s has the wrong type, should be %s", #var, #type_);
-    PyErr_SetString(PyExc_TypeError, errmsg); PyErr_PrintEx(0); return NULL; }
+    SWIG_Error(SWIG_TypeError, errmsg); return NULL; }
     output = %static_cast(_ptr, type_*);
    }
 %enddef
@@ -46,19 +108,22 @@
 #include "SiconosConfig.h"
 #include "SolverOptions.h"
 #include "SparseMatrix.h"
+#include "NumericsMatrix.h"
 #include "SparseBlockMatrix.h"
-#include "fc3d_AlartCurnier_functions.h"
-#include "fc3d_nonsmooth_Newton_AlartCurnier.h"
-#include "fc3d_nonsmooth_Newton_FischerBurmeister.h"
-#include "fc3d_nonsmooth_Newton_natural_map.h"
-#include "AlartCurnierGenerated.h"
-#include "FischerBurmeisterGenerated.h"
-#include "NaturalMapGenerated.h"
-#include "gfc3d_compute_error.h"
-#include "Numerics_functions.h"
+#include "NumericsSparseMatrix.h"
+
+#ifdef SWIGPYTHON
+#include "Numerics_python_functions.h"
+#endif /* SWIGPYTHON */
+
+#ifdef SWIGMATLAB
+#include "Numerics_matlab_functions.h"
+#endif /* SWIGMATLAB */
+
 #include "SiconosSets.h"
 #include "GAMSlink.h"
-%}
+#include "NumericsFwd.h"
+  %}
 
 #ifdef WITH_SERIALIZATION
 %{
@@ -74,6 +139,7 @@
 // need to do this here for other modules to reference numerics structs by shared_ptr.
 // swig requires same namespace 'std11' is used.
 %{
+#ifdef __cplusplus
 #if defined(SICONOS_STD_SHARED_PTR) && !defined(SICONOS_USE_BOOST_FOR_CXX11)
 namespace std11 = std;
 #include <memory>
@@ -82,9 +148,12 @@ namespace std11 = std;
 #include <boost/enable_shared_from_this.hpp>
 namespace std11 = boost;
 #endif
+#endif
 %}
+#ifdef __cplusplus
 #define SWIG_SHARED_PTR_NAMESPACE std11
 %include boost_shared_ptr.i
+#endif
 
 // put needed shared_ptrs here
 // commented-out for now, swig insists on calling freeFrictionContactProblem()
@@ -96,11 +165,14 @@ namespace std11 = boost;
  %rename (LCP) LinearComplementarityProblem;
  %rename (MLCP) MixedLinearComplementarityProblem;
  %rename (MCP) MixedComplementarityProblem;
- %rename (VI) VariationalInequality_;
+ %rename (NCP) NonlinearComplementarityProblem;
+ %rename (VI) VariationalInequality;
  %rename (AVI) AffineVariationalInequalities;
 
  %ignore lcp_compute_error_only;
 
+ // -- Numpy typemaps --
+ // See http://docs.scipy.org/doc/numpy/reference/swig.interface-file.html.
  %apply (int DIM1 , int DIM2 , double* IN_FARRAY2)
  {(int nrows, int ncols, double* data          )};
 
@@ -141,11 +213,14 @@ namespace std11 = boost;
  {(double B[9])}
 
 
-%include solverOptions.i
-
 %include Numerics_typemaps_problems.i
 %include Numerics_typemaps_basic_linalg.i
 %include Numerics_typemaps_numericsmatrices.i
+
+%include NonSmoothDrivers.h
+%include solverOptions.i
+%import tlsdef.h
+%include numerics_verbose.h
 
 // this has to die --xhub
 // info param
@@ -155,7 +230,7 @@ namespace std11 = boost;
   // checkTrivialCase => better if directly in solvers, not in driver.
   $1 = &temp_info;
 }
-
+%warnfilter(322) set_cstruct;
 %inline
 %{
  static unsigned int isqrt(unsigned int n)
@@ -183,6 +258,7 @@ namespace std11 = boost;
 #endif
   }
 
+
 #ifdef __cplusplus
   extern "C" {
 #endif
@@ -197,10 +273,34 @@ namespace std11 = boost;
 #endif
 %}
 
+#ifdef SWIGPYTHON
 %fragment("NumPy_Fragments");
+#endif /* SWIGPYTHON */
 
-//Relay
-%include "relay_cst.h"
+// includes in 'begin' mandatory to avoid mess with
+// solverOptions.i, numerics_common and fwd decl
+// all this because of SolverOptions extend.
+%begin %{
+#include "relay_cst.h"
+#include "AVI_cst.h"
+#include "SOCLCP_cst.h"
+#include "Friction_cst.h"
+#include "lcp_cst.h"
+#include "MCP_cst.h"
+#include "NCP_cst.h"
+#include "mlcp_cst.h"
+#include "VI_cst.h"
+#include "GenericMechanical_cst.h"
+#include "fc2d_Solvers.h"
+#include "fc3d_Solvers.h"
+#include "gfc3d_Solvers.h"
+#include "MCP_Solvers.h"
+#include "NCP_Solvers.h"
+#include "MLCP_Solvers.h"
+#include "NonSmoothDrivers.h"
+  %}
+
+%include numerics_NM.i
 
 %include numerics_MLCP.i
 
@@ -210,16 +310,13 @@ namespace std11 = boost;
 /////////////////////////
 
 %typemap(out) (double* q) {
-  npy_intp dims[1];
 
-  if (!arg1->M) { PyErr_SetString(PyExc_TypeError, "M is not present, don't known the size"); SWIG_fail; }
+  if (!arg1->M) { SWIG_exception_fail(SWIG_RuntimeError, "M is not present, don't known the size"); }
 
-  dims[0] = arg1->M->size0;
   if ($1)
   {
-    PyObject *obj = PyArray_SimpleNewFromData(1, dims, NPY_DOUBLE, $1);
-    PyArrayObject *array = (PyArrayObject*) obj;
-    if (!array || !require_fortran(array)) SWIG_fail;
+    SN_OBJ_TYPE *obj;
+    C_to_target_lang1(obj, arg1->M->size0, $1, SWIG_fail);
     $result = obj;
   }
   else
@@ -227,16 +324,13 @@ namespace std11 = boost;
  }
 
 %typemap(out) (double* mu) {
-  npy_intp dims[1];
 
-  if (arg1->numberOfContacts <= 0) { PyErr_SetString(PyExc_TypeError, "numberOfContacts is not set"); SWIG_fail; }
+  if (arg1->numberOfContacts <= 0) { SWIG_exception_fail(SWIG_RuntimeError, "numberOfContacts is not set"); }
 
-  dims[0] = arg1->numberOfContacts;
   if ($1)
   {
-    PyObject *obj = PyArray_SimpleNewFromData(1, dims, NPY_DOUBLE, $1);
-    PyArrayObject *array = (PyArrayObject*) obj;
-    if (!array || !require_fortran(array)) SWIG_fail;
+    SN_OBJ_TYPE *obj;
+    C_to_target_lang1(obj, arg1->numberOfContacts, $1, SWIG_fail);
     $result = obj;
   }
   else
@@ -248,7 +342,7 @@ namespace std11 = boost;
   // Still some dark magic :( --xhub
   if (arg1->numberOfContacts <= 0)
   {
-    PyErr_SetString(PyExc_RuntimeError, "numberOfContacts is not set, it sould be done first!");
+    SWIG_exception(SWIG_RuntimeError, "numberOfContacts is not set, it sould be done first!");
     SWIG_fail;
   }
 
@@ -256,8 +350,7 @@ namespace std11 = boost;
   {
     char msg[1024];
     snprintf(msg, sizeof(msg), "Size of mu is %ld, but the number of contacts is %d! Both should be equal!\n", array_size(array2, 0), arg1->numberOfContacts);
-    PyErr_SetString(PyExc_RuntimeError, msg);
-    SWIG_fail;
+    SWIG_exception_fail(SWIG_ValueError, msg);
   }
 
   if (!$1) { $1 = (double*)malloc(arg1->numberOfContacts * sizeof(double)); }
@@ -272,16 +365,14 @@ namespace std11 = boost;
   assert(arg1);
   if (!arg1->M)
   {
-    PyErr_SetString(PyExc_RuntimeError, "M is not initialized, it sould be done first!");
-    SWIG_fail;
+    SWIG_exception_fail(SWIG_RuntimeError, "M is not initialized, it sould be done first!");
   }
 
   int size = arg1->M->size0;
   if (size !=  array_size(array2, 0))
   {
     snprintf(msg, sizeof(msg), "Size of q is %ld, but the size of M is %d! Both should be equal!\n", array_size(array2, 0), size);
-    PyErr_SetString(PyExc_RuntimeError, msg);
-    SWIG_fail;
+    SWIG_exception_fail(SWIG_RuntimeError, msg);
   }
 
   if (!$1) { $1 = (double*)malloc(size * sizeof(double)); }
@@ -325,12 +416,17 @@ namespace std11 = boost;
   }
 %}
 
-%include Numerics_for_python_callback.i
 
 %include numerics_common.i
 
+%include Numerics_callback.i
+
+#ifdef SWIGPYTHON
+%include Numerics_for_python_callback.i
 %include numerics_MCP.i
+#endif /* SWIGPYTHON */
 %include Numerics_MCP2.i
+%include Numerics_NCP.i
 %include Numerics_VI.i
 
 
@@ -363,19 +459,36 @@ namespace std11 = boost;
   $1 = &fc3d_NaturalMapFunctionGenerated;
  }
 
-%include "fc3d_AlartCurnier_functions.h"
-%include "fc3d_nonsmooth_Newton_AlartCurnier.h"
-%include "fc3d_nonsmooth_Newton_FischerBurmeister.h"
-%include "fc3d_nonsmooth_Newton_natural_map.h"
-%include "AlartCurnierGenerated.h"
-%include "FischerBurmeisterGenerated.h"
-%include "NaturalMapGenerated.h"
-%include "fclib_interface.h"
-%include "GAMSlink.h"
-
 // the order matters
 %include numerics_FC.i
+%include GAMSlink.h
 %include numerics_GFC.i
+
+%define STR_FIELD_COPY(field,strobj)
+{
+  int alloc = 0;
+  char* name_str;
+  size_t len = 0;
+  int res = SWIG_AsCharPtrAndSize(strobj, &name_str, &len, &alloc);
+  if (!SWIG_IsOK(res)) {
+    SWIG_Error(SWIG_ArgError(res), "in method unknown', argument " "1"" of type '" "char *""'");
+  }
+
+  // Some weird logic here
+  if (field)
+  {
+    field = (char*)realloc(field, len*sizeof(char));
+  }
+  else
+  {
+    field = (char*)malloc(len*sizeof(char));
+  }
+  strncpy(field, name_str, len);
+
+  if (alloc == SWIG_NEWOBJ) free(name_str);
+
+}
+%enddef
 
 %extend SN_GAMSparams
 {
@@ -386,6 +499,15 @@ namespace std11 = boost;
     return (SN_GAMSparams*) SO->solverParameters;
   }
 
+  void gamsdir_set(SN_OBJ_TYPE* strobj)
+  {
+    STR_FIELD_COPY($self->gams_dir, strobj)
+  }
+
+  void modeldir_set(SN_OBJ_TYPE* strobj)
+  {
+    STR_FIELD_COPY($self->model_dir, strobj)
+  }
   ~SN_GAMSparams()
   {
     //do nothing
@@ -400,15 +522,12 @@ namespace std11 = boost;
 %{
 #include <GenericMechanical_cst.h>
 %}
-%include GenericMechanical_cst.h
-
-%include numerics_NM.i
+//%include GenericMechanical_cst.h
 
 #ifdef WITH_SERIALIZATION
 %make_picklable(Callback, Numerics);
-%make_picklable(_SolverOptions, Numerics);
+%make_picklable(SolverOptions, Numerics);
 %make_picklable(FrictionContactProblem, Numerics);
 %make_picklable(NumericsMatrix, Numerics);
 %make_picklable(SparseBlockStructuredMatrix, Numerics);
 #endif
-

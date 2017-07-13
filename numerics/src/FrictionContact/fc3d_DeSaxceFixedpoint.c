@@ -26,6 +26,7 @@
 /* #define DEBUG_STDOUT */
 /* #define DEBUG_MESSAGES */
 #include "debug.h"
+#include "numerics_verbose.h"
 
 
 void fc3d_DeSaxceFixedPoint(FrictionContactProblem* problem, double *reaction, double *velocity, int* info, SolverOptions* options)
@@ -44,7 +45,7 @@ void fc3d_DeSaxceFixedPoint(FrictionContactProblem* problem, double *reaction, d
   int itermax = iparam[0];
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+  double norm_q = cblas_dnrm2(nc*3 , problem->q , 1);
 
   /*****  Fixed point iterations *****/
   int iter = 0; /* Current iteration number */
@@ -53,7 +54,7 @@ void fc3d_DeSaxceFixedPoint(FrictionContactProblem* problem, double *reaction, d
   int contact; /* Number of the current row of blocks in M */
   int nLocal = 3;
   dparam[0] = dparam[2]; // set the tolerance for the local solver
-  double * velocitytmp = (double *)malloc(n * sizeof(double));
+  double * velocitytmp = (double *)calloc(n, sizeof(double));
 
   double rho = 0.0;
 
@@ -68,7 +69,7 @@ void fc3d_DeSaxceFixedPoint(FrictionContactProblem* problem, double *reaction, d
   }
   else
   {
-    numericsError("fc3d_DeSaxceFixedPoint", "The De Saxce fixed point is implemented with a fixed time--step. Use FixedPointProjection (VI_FPP) method for a variable time--step");
+    numerics_error("fc3d_DeSaxceFixedPoint", "The De Saxce fixed point is implemented with a fixed time--step. Use FixedPointProjection (VI_FPP) method for a variable time--step");
   }
 
   double alpha = 1.0;
@@ -82,7 +83,7 @@ void fc3d_DeSaxceFixedPoint(FrictionContactProblem* problem, double *reaction, d
 
       /* velocitytmp <- q + M * reaction  */
       beta = 1.0;
-      prodNumericsMatrix(n, n, alpha, M, reaction, beta, velocitytmp);
+      NM_gemv(alpha, M, reaction, beta, velocitytmp);
 
       /* projection for each contact */
       for (contact = 0 ; contact < nc ; ++contact)
@@ -96,7 +97,7 @@ void fc3d_DeSaxceFixedPoint(FrictionContactProblem* problem, double *reaction, d
       }
 
       /* **** Criterium convergence **** */
-      fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq, &error);
+      fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q, &error);
 
       if (options->callback)
       {

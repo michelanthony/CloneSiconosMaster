@@ -23,9 +23,12 @@
 #include "Model.hpp"
 #include "NonSmoothDynamicalSystem.hpp"
 
-#include <MLCP_Solvers.h>
+// --- Numerics headers ---
+#include "NonSmoothDrivers.h"
+#include "MLCP_Solvers.h"
 
 using namespace RELATION;
+// #define DEBUG_NCOLOR
 // #define DEBUG_STDOUT
 // #define DEBUG_MESSAGES
 #include "debug.h"
@@ -178,7 +181,7 @@ int MLCP::compute(double time)
     try
     {
       info = mlcp_driver(&_numerics_problem, _z->getArray(), _w->getArray(),
-                         &*_numerics_solver_options, &*_numerics_options);
+                         &*_numerics_solver_options);
     }
     catch (...)
     {
@@ -215,7 +218,7 @@ void MLCP::initialize(SP::Simulation sim)
   // General initialize for LinearOSNS
   LinearOSNS::initialize(sim);
 
-  _numerics_problem.M = &*_M->getNumericsMatrix();
+  _numerics_problem.M = &*_M->numericsMatrix();
 }
 void  MLCP::updateInteractionBlocks()
 {

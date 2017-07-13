@@ -16,6 +16,7 @@
 #define _XOPEN_SOURCE 700
 
 #include "NumericsMatrix.h"
+#include "NumericsSparseMatrix.h"
 #include "GlobalFrictionContactProblem.h"
 #include "gfc3d_Solvers.h"
 
@@ -95,7 +96,7 @@ static int gfc3d_AVI_gams_base(GlobalFrictionContactProblem* problem, double *re
   int size = problem->dimension*problem->numberOfContacts;
 
   NumericsMatrix Htmat;
-  fillNumericsMatrix(&Htmat, NM_SPARSE, problem->H->size0, problem->H->size1, NULL);
+  NM_fill(&Htmat, NM_SPARSE, problem->H->size0, problem->H->size1, NULL);
   NumericsMatrix Emat;
   NM_null(&Emat);
   Emat.storageType = NM_SPARSE;
@@ -122,7 +123,7 @@ static int gfc3d_AVI_gams_base(GlobalFrictionContactProblem* problem, double *re
   FC3D_gams_generate_first_constraints(&Akmat, problem->mu);
 
 
-  SN_Gams_set_dirs(options->solverParameters, defModel, defGAMSdir, model, sysdir, "/fc_vi.gms");
+  SN_Gams_set_dirs((SN_GAMSparams*)options->solverParameters, defModel, defGAMSdir, model, sysdir, "/fc_vi.gms");
 
   const char* filename = GAMSP_get_filename(options->solverParameters);
 
@@ -181,7 +182,7 @@ static int gfc3d_AVI_gams_base(GlobalFrictionContactProblem* problem, double *re
   }
 
   optHandle_t Opts[] = {Optr, solverOptPtr};
-  SN_Gams_set_options(options->solverParameters, Opts);
+  SN_Gams_set_options((SN_GAMSparams*)options->solverParameters, Opts);
 
   optWriteParameterFile(solverOptPtr, msg);
 
@@ -222,9 +223,9 @@ static int gfc3d_AVI_gams_base(GlobalFrictionContactProblem* problem, double *re
 
   SN_free_SN_GAMS_gdx(gdx_data);
   free(gdx_data);
-  freeNumericsMatrix(&Htmat);
-  freeNumericsMatrix(&Emat);
-  freeNumericsMatrix(&Akmat);
+  NM_free(&Htmat);
+  NM_free(&Emat);
+  NM_free(&Akmat);
   optFree(&Optr);
   optFree(&solverOptPtr);
   return status;

@@ -24,6 +24,7 @@
 #define OccR_hpp
 
 #include "MechanicsFwd.hpp"
+#include "Geometer.hpp"
 
 #include <SiconosFwd.hpp>
 #include <NewtonEulerFrom3DLocalFrameR.hpp>
@@ -35,7 +36,9 @@ public:
    *  \param contact1 : the first contact.
    *  \param contact2 : the second contact.
    */
-  OccR(const ContactPoint& contact1, const ContactPoint& contact2);
+  OccR(const ContactPoint& contact1,
+       const ContactPoint& contact2,
+       const DistanceCalculatorType& distance_calculator = CadmbtbDistanceType());
 
   /** Compute h.
    *  \param time : the time.
@@ -49,6 +52,11 @@ public:
    */
   void setOffset(double val) { _offset = val; };
 
+  /** Set normalFromFace1.
+   * \param val : the new value.
+   */
+  void setNormalFromFace1(bool val) { _normalFromFace1 = val; };
+
   /** Get geometer.
    * \return a SP::Geometer object.
    */
@@ -58,6 +66,10 @@ public:
    * \param geometer the new geometer
    */
   void setGeometer(SP::Geometer geometer) { _geometer = geometer; }
+
+  /** visitor hooks
+   */
+  ACCEPT_STD_VISITORS();
 
 protected:
   const ContactPoint& _contact1;

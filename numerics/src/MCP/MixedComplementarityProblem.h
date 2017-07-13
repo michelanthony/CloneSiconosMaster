@@ -42,15 +42,15 @@
 */
 
 #include "SiconosConfig.h"
-#include "NumericsMatrix.h"
+#include "NumericsFwd.h"
 
 /** type for user defined function used to compute Fmcp and its jacobian.
     TODO : set properly the list of arguments for this function, when
     things will be clearer ...
  */
 typedef void (*ptrFunctionMCP)(int size , double* z, double * F);
-typedef void (*ptrFunctionMCP2)(void* env, int n1, int n2, double* z, double * F);
-typedef void (*ptrFunctionMCP_nabla)(void* env, int n1, int n2, double* z, NumericsMatrix * F);
+typedef void (*ptrFunctionMCP2)(void* env, int n, double* z, double * F);
+typedef void (*ptrFunctionMCP_nabla)(void* env, int n, double* z, NumericsMatrix * F);
 
 /** \struct  MixedComplementarityProblem MixedComplementarityProblem.h
  * The structure that defines a Mixed Complementarity problem (MCP) : Find two vectors \f$(z,w \in {{\mathrm{I\!R}}}^{n+m})\f$ such that:\n
@@ -64,7 +64,7 @@ typedef void (*ptrFunctionMCP_nabla)(void* env, int n1, int n2, double* z, Numer
   \f$z_i,w_i\f$ are vectors of size <pre>sizeEqualities</pre>, \f$z_e,w_e\f$ vectors of size <pre>sizeInequalities</pre>
   and \f$F\f$ is a non linear function that must be user-defined.
  */
-typedef struct
+struct MixedComplementarityProblem
 {
   int sizeEqualities; /**< size of equalities $z_e, w_e$ size */
   int sizeInequalities; /**< size of inequalities $z_i,w_i$ size */
@@ -75,12 +75,12 @@ typedef struct
   /** jacobian of F(z) */
   double* nablaFmcp ;
 
-} MixedComplementarityProblem;
+};
 
-/** \struct MixedComplementarityProblem2_ MixedComplementarityProblem.h
+/** \struct MixedComplementarityProblem2 MixedComplementarityProblem.h
  * Structure that contains and defines a MixedComplementarityProblem
  */
-typedef struct MixedComplementarityProblem2_
+struct MixedComplementarityProblem2
 {
   int n1; /**< number of equalities constraints */
   int n2; /**< size of complementary variables */
@@ -90,7 +90,7 @@ typedef struct MixedComplementarityProblem2_
   void* env; /**< environment for the compute_Fmcp and compute_nabla_Fmcp function.
                When called from Python, it contains an object with compute_Fmcp and compute_nabla_Fmcp as methods.
                When called from C, it can reference a data struct containing variables needed for the computations.*/
-} MixedComplementarityProblem2;
+};
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
 extern "C"
@@ -103,7 +103,15 @@ extern "C"
    */
   void freeMixedComplementarityProblem(MixedComplementarityProblem* problem);
 
+  /** free an MCP problem 
+   * \param mcp structure to free
+   */
+  void freeMCP(MixedComplementarityProblem2* mcp);
 
+  /** create an empty MCP problem
+   * \return an MixedComplementarityProblem instance
+   */
+  MixedComplementarityProblem2* newMCP(void);
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
 }

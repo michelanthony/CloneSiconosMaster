@@ -4,11 +4,12 @@
 #include <time.h>
 #include <float.h>
 
-#include "NumericsOptions.h"
 #include "fc3d_Solvers.h"
 #include "NonSmoothDrivers.h"
 #include "fclib_interface.h"
-
+#include "GlobalFrictionContactProblem.h"
+#include "gfc3d_Solvers.h"
+#include "NumericsSparseMatrix.h"
 /* #define DEBUG_MESSAGES 1 */
 /* #define DEBUG_STDOUT */
 #include "debug.h"
@@ -67,13 +68,13 @@ int gfc3d_LmgcDriver(double *reaction,
 {
 
   /* NumericsMatrix M, H; */
-  NumericsMatrix * M =newNumericsMatrix();
+  NumericsMatrix * M =NM_new();
   M->storageType = 2; /* sparse */
   M->size0 = n;
   M->size1 = n;
 
 
-  NumericsMatrix * H =newNumericsMatrix();
+  NumericsMatrix * H =NM_new();
   H->storageType = 2;
   H->size0 = M->size0;
   H->size1 = 3 * nc;
@@ -146,10 +147,6 @@ int gfc3d_LmgcDriver(double *reaction,
   problem->b = b;
   problem->mu = mu;
 
-  NumericsOptions numerics_options;
-  setDefaultNumericsOptions(&numerics_options);
-  numerics_options.verboseMode = verbose;
-
   SolverOptions numerics_solver_options;
 
   gfc3d_setDefaultSolverOptions(&numerics_solver_options, solver_id);
@@ -167,11 +164,10 @@ int gfc3d_LmgcDriver(double *reaction,
   /* globalFrictionContact_printInFile(problem, file); */
   /* fclose(file); */
   int rinfo =  gfc3d_driver(problem,
-                                             reaction,
-                                             velocity,
-                                             globalVelocity,
-                                             &numerics_solver_options,
-                                             &numerics_options);
+			    reaction,
+			    velocity,
+			    globalVelocity,
+			    &numerics_solver_options);
 
   /* FILE * file1  =  fopen("tutu.dat", "w"); */
   /* globalFrictionContact_printInFile(problem, file1); */
@@ -221,8 +217,8 @@ int gfc3d_LmgcDriver(double *reaction,
   }
 
 
-  freeNumericsMatrix(M);
-  freeNumericsMatrix(H);
+  NM_free(M);
+  NM_free(H);
   free(M);
   free(H);
   free(problem);
@@ -338,10 +334,6 @@ int gfc3d_LmgcDriver(double *reaction,
 /*   problem.b = b; */
 /*   problem.mu = mu; */
 
-/*   NumericsOptions numerics_options; */
-/*   setDefaultNumericsOptions(&numerics_options); */
-/*   numerics_options.verboseMode = verbose; */
-
 /*   SolverOptions numerics_solver_options; */
 
 /*   gfc3d_setDefaultSolverOptions(&numerics_solver_options, solver_id); */
@@ -359,8 +351,7 @@ int gfc3d_LmgcDriver(double *reaction,
 /*                                              reaction, */
 /*                                              velocity, */
 /*                                              globalVelocity, */
-/*                                              &numerics_solver_options, */
-/*                                              &numerics_options); */
+/*                                              &numerics_solver_options); */
 
 /*   if(outputFile == 1) */
 /*   { */
@@ -404,8 +395,8 @@ int gfc3d_LmgcDriver(double *reaction,
 /*   } */
 
 
-/*   freeNumericsMatrix(&M); */
-/*   freeNumericsMatrix(&H); */
+/*   NM_free(&M); */
+/*   NM_free(&H); */
 
 /*   free(_colM); */
 /*   free(_colH); */

@@ -20,12 +20,11 @@
 #include <string.h>
 #include <time.h>
 #include <float.h>
-
-#include "NumericsOptions.h"
 #include "gfc3d_Solvers.h"
 #include "fc3d_Solvers.h"
 #include "NonSmoothDrivers.h"
 
+#include "numerics_verbose.h"
 
 int gfc3d_setDefaultSolverOptions(SolverOptions* options, int solverId)
 {
@@ -41,7 +40,7 @@ int gfc3d_setDefaultSolverOptions(SolverOptions* options, int solverId)
   }
   case SICONOS_GLOBAL_FRICTION_3D_NSN_AC_WR:
   {
-    info =    gfc3d_globalAlartCurnier_wr_setDefaultSolverOptions(options);
+    info =    gfc3d_nonsmooth_Newton_AlartCurnier_wr_setDefaultSolverOptions(options);
     break;
   }
   case SICONOS_GLOBAL_FRICTION_3D_NSGS_WR:
@@ -76,7 +75,7 @@ int gfc3d_setDefaultSolverOptions(SolverOptions* options, int solverId)
   }
   default:
   {
-    numericsError("gfc3d_setDefaultSolverOptions", "Unknown Solver");
+    numerics_error("gfc3d_setDefaultSolverOptions", "Unknown Solver");
 
   }
   }

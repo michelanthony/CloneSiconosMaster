@@ -24,13 +24,25 @@
   REGISTER(KneeJointR)                          \
   REGISTER(PivotJointR)                         \
   REGISTER(PrismaticJointR)                     \
+  REGISTER(CylindricalJointR)                   \
+  REGISTER(NewtonEulerJointR)                   \
+  REGISTER(FixedJointR)                         \
+  REGISTER(JointStopR)                          \
+  REGISTER(JointFrictionR)                      \
   REGISTER(FMatrix)                             \
   REGISTER(NSLawMatrix)                         \
   REGISTER(OccR)                                \
   REGISTER(OccBody)                             \
+  REGISTER(TopoDS_Shape)                        \
+  REGISTER(TopoDS_Face)                         \
+  REGISTER(TopoDS_Edge)                         \
+  REGISTER(TopoDS_Shapes)                       \
   REGISTER(OccContactShape)                     \
   REGISTER(OccContactFace)                      \
   REGISTER(OccContactEdge)                      \
+  REGISTER(DistanceCalculatorType)              \
+  REGISTER(OccDistanceType)                     \
+  REGISTER(CadmbtbDistanceType)                 \
   REGISTER(ContactShapes)                       \
   REGISTER(ContactPoint)                        \
   REGISTER(ContactPoints)                       \
@@ -42,7 +54,23 @@
   REGISTER(BulletSpaceFilter)                   \
   REGISTER(BulletTimeStepping)                  \
   REGISTER(MBTB_FC3DContactRelation)            \
-  REGISTER(MBTB_ContactRelation)
+  REGISTER(MBTB_ContactRelation)                \
+                                                \
+  /* Proposed new Mechanics API */              \
+  REGISTER(BodyDS)                              \
+  REGISTER(SiconosContactor)                    \
+  REGISTER(SiconosContactorSet)                 \
+  REGISTER(SiconosContactorBase)                \
+  REGISTER(SiconosShape)                        \
+  REGISTER(SiconosSphere)                       \
+  REGISTER(SiconosBox)                          \
+  REGISTER(SiconosCylinder)                     \
+  REGISTER(SiconosConvexHull)                   \
+  REGISTER(SiconosPlane)                        \
+  REGISTER(SiconosMesh)                         \
+  REGISTER(SiconosHeightMap)                    \
+  REGISTER(SiconosCollisionManager)             \
+  REGISTER(SiconosBulletCollisionManager)
 
 #include <SiconosVisitables.hpp>
 

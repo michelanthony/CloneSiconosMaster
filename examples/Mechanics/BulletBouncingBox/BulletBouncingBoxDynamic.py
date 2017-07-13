@@ -25,7 +25,7 @@ from siconos.kernel import \
 
 import siconos.kernel as sk
 
-from siconos.mechanics.contact_detection.bullet import \
+from siconos.mechanics.collision.bullet import \
      btConvexHullShape, btVector3, btCollisionObject, \
      btBoxShape, btMatrix3x3, \
      BulletSpaceFilter, \
@@ -150,7 +150,7 @@ bouncingBox.initialize()
 # Get the values to be plotted
 # ->saved in a matrix dataPlot
 
-N = (T - t0) / h
+N = int((T - t0) / h)
 dataPlot = zeros((N+1, 4))
 
 #

@@ -27,6 +27,8 @@
 #include "pinv.h"
 #include "Friction_cst.h"
 #include "SiconosBlas.h"
+#include "numerics_verbose.h"
+
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 
 void fc3d_nsgs_initialize_local_solver_velocity(SolverPtr* solve, FreeSolverPtr* freeSolver, ComputeErrorPtr* computeError, FrictionContactProblem* problem, FrictionContactProblem* localproblem, SolverOptions* localsolver_options)
@@ -66,7 +68,7 @@ void fc3d_nsgs_velocity(FrictionContactProblem* problem, double *reaction, doubl
   int itermax = iparam[0];
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+  double norm_q = cblas_dnrm2(nc*3 , problem->q , 1);
   /* Check for trivial case */
   /*   *info = checkTrivialCase(n, q,velocity, reaction, options); */
 
@@ -106,7 +108,7 @@ void fc3d_nsgs_velocity(FrictionContactProblem* problem, double *reaction, doubl
   }
   if (options->numberOfInternalSolvers < 1)
   {
-    numericsError("fc3d_nsgs_velocity", "The NSGS method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
+    numerics_error("fc3d_nsgs_velocity", "The NSGS method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
   }
 
 
@@ -146,7 +148,7 @@ void fc3d_nsgs_velocity(FrictionContactProblem* problem, double *reaction, doubl
 
 
     /* **** Criterium convergence **** */
-    (*computeError)(problem, reaction , velocity, tolerance, options, normq,  &error);
+    (*computeError)(problem, reaction , velocity, tolerance, options, norm_q,  &error);
 
     if (verbose > 0)
       printf("----------------------------------- FC3D - NSGS_VELOCITY - Iteration %i Residual = %14.7e\n", iter, error);
@@ -183,7 +185,7 @@ int fc3d_nsgs_velocity_setDefaultSolverOptions(SolverOptions* options)
   options->iparam[0] = 1000;
   options->dparam[0] = 1e-4;
   options->internalSolvers = (SolverOptions *)malloc(sizeof(SolverOptions));
-  fc3d_onecontact_nonsmooth_Newtow_setDefaultSolverOptions(options->internalSolvers);
+  fc3d_onecontact_nonsmooth_Newton_setDefaultSolverOptions(options->internalSolvers);
 
   return 0;
 }

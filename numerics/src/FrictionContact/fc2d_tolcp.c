@@ -24,17 +24,19 @@
 #include "fc2d_Solvers.h"
 #include "LCP_Solvers.h"
 #include <assert.h>
+#include "numerics_verbose.h"
+#include "NumericsMatrix.h"
 
 int fc2d_tolcp(FrictionContactProblem* problem, LinearComplementarityProblem * lcp_problem)
 {
   if (problem->dimension != 2)
   {
-    numericsError("fc2d_tolcp", "Dimension of the problem : problem-> dimension is not compatible or is not set");
+    numerics_error("fc2d_tolcp", "Dimension of the problem : problem-> dimension is not compatible or is not set");
     return 1;
   }
   int nc = problem->numberOfContacts;
   lcp_problem->size = 3 * nc ;
-  lcp_problem->M = newNumericsMatrix();
+  lcp_problem->M = NM_new();
   lcp_problem->M->size0 = 3 * nc ;
   lcp_problem->M->size1 = 3 * nc ;
 

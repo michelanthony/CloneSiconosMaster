@@ -52,13 +52,8 @@ set(${PROJECT_NAME}_LOCAL_LIBRARIES
 set(installed_targets ${installed_targets}
   CACHE INTERNAL "List of installed libraries for the siconos project.")
 
-if(CMAKE_VERSION VERSION_LESS 3)
-  set(PRIVATE LINK_PRIVATE CACHE INTERNAL "")
-  set(PUBLIC LINK_PUBLIC CACHE INTERNAL "")
-else()
-  set(PRIVATE PRIVATE CACHE INTERNAL "")
-  set(PUBLIC PUBLIC CACHE INTERNAL "")
-endif()
+set(PRIVATE PRIVATE CACHE INTERNAL "")
+set(PUBLIC PUBLIC CACHE INTERNAL "")
 
 set(tests_timeout 15 CACHE INTERNAL "Limit time for tests (in seconds)")
 
@@ -87,11 +82,17 @@ if(WITH_GIT)
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()
 
+string(TIMESTAMP BUILD_TIMESTAMP)
+
 # ---- Python ---
 # (interp and lib)
 # Warning FP : python is always required, at least
 # for siconos script.
-find_package(PythonFull REQUIRED)
+if(WITH_PYTHON_WRAPPER)
+  find_package(PythonFull REQUIRED)
+else()
+  find_package(PythonInterp REQUIRED)
+endif()
 get_filename_component(PYTHON_EXE_NAME ${PYTHON_EXECUTABLE} NAME)
 if(WITH_PYTHON_WRAPPER OR WITH_DOCUMENTATION)
   include(FindPythonModule)
@@ -110,11 +111,14 @@ IF(NOT SIZE_OF_CSI)
   CHECK_TYPE_SIZE("size_t" SIZE_OF_CSI)
 ENDIF(NOT SIZE_OF_CSI)
 
-IF ("${SIZE_OF_CSI}" EQUAL 8)
-  SET(SICONOS_INT64 TRUE)
-ELSE ("${SIZE_OF_CSI}" EQUAL 8)
-  SET(SICONOS_INT64 FALSE)
-ENDIF ("${SIZE_OF_CSI}" EQUAL 8)
+IF(NOT DEFINED SICONOS_INT64)
+  IF ("${SIZE_OF_CSI}" EQUAL 8)
+    SET(SICONOS_INT64 TRUE)
+  ELSE ("${SIZE_OF_CSI}" EQUAL 8)
+    SET(SICONOS_INT64 FALSE)
+  ENDIF ("${SIZE_OF_CSI}" EQUAL 8)
+ENDIF()
+
 
 # =========== install setup ===========
 
@@ -131,6 +135,40 @@ else()
   ASSERT(CMAKE_INSTALL_LIBDIR)
   set(_install_lib ${CMAKE_INSTALL_LIBDIR})
   set(${PROJECT_NAME}_INSTALL_LIB_DIR ${_install_lib})
+endif()
+
+
+# --- RPATH stuff ---
+# See https://cmake.org/Wiki/CMake_RPATH_handling
+# Warning: RPATH settings must be defined before install(...) settings.
+if(FORCE_SKIP_RPATH)
+  set(CMAKE_SKIP_BUILD_RPATH TRUE)
+else()
+  set(CMAKE_SKIP_BUILD_RPATH FALSE)
+endif()
+
+# when building, don't use the install RPATH already
+# (but later on when installing)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
+
+# when building a binary package, it makes no sense to add this rpath
+if(NOT FORCE_SKIP_RPATH)
+  # the RPATH to be used when installing
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
+endif(NOT FORCE_SKIP_RPATH)
+
+# don't add the automatically determined parts of the RPATH
+# which point to directories outside the build tree to the install RPATH
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# The following settings were copied from
+# https://cmake.org/Wiki/CMake_RPATH_handling
+# to avoid the rpath issue that appears on OS X El Capitan
+
+# the RPATH to be used when installing, but only if it's not a system directory
+list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+if("${isSystemDir}" STREQUAL "-1")
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${_install_lib}")
 endif()
 
 # install cmake macros
@@ -160,40 +198,6 @@ else()
     echo >> ${CMAKE_CURRENT_BINARY_DIR}/install_manifest.txt
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()
-# # =========== RPATH stuff ===========
-# # we follow recommendation of https://cmake.org/Wiki/CMake_RPATH_handling
-
-# =========== RPATH stuff ===========
-# do not skip the full RPATH for the build tree
-if(FORCE_SKIP_RPATH)
-  set(CMAKE_SKIP_BUILD_RPATH TRUE)
-else()
-  set(CMAKE_SKIP_BUILD_RPATH FALSE)
-endif()
-
-# when building, don't use the install RPATH already
-# (but later on when installing)
-set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE) 
-
-# when building a binary package, it makes no sense to add this rpath
-if(NOT FORCE_SKIP_RPATH)
-  # the RPATH to be used when installing
-  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}")
-endif(NOT FORCE_SKIP_RPATH)
-
-# don't add the automatically determined parts of the RPATH
-# which point to directories outside the build tree to the install RPATH
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-# The following settings were copied from
-# https://cmake.org/Wiki/CMake_RPATH_handling
-# to avoid the rpath issue that appears on OS X El Capitan
-
-# # the RPATH to be used when installing, but only if it's not a system directory
-# list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
-# if("${isSystemDir}" STREQUAL "-1")
-#    set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-# endif("${isSystemDir}" STREQUAL "-1")
 
 # init all common options for enabled components
 set(common_options DOCUMENTATION TESTING UNSTABLE PYTHON_WRAPPER
@@ -204,6 +208,9 @@ endforeach()
 # ========= Documentation =========
 if(WITH_DOCUMENTATION OR WITH_DOXY2SWIG OR WITH_DOXYGEN_WARNINGS)
   set(USE_DOXYGEN TRUE)
+  add_custom_target(upload
+    COMMENT documentation upload
+    COMMAND ${CMAKE_SOURCE_DIR}/Build/tools/publish.py -u ${GFORGE_USER} -s ${CMAKE_SOURCE_DIR} -b ${CMAKE_BINARY_DIR} -m)
 endif()
 
 if(WITH_DOCUMENTATION)

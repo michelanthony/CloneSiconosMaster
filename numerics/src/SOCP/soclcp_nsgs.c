@@ -29,11 +29,13 @@
 #include <math.h>
 #include <assert.h>
 #include <time.h>
+#include <string.h>
 
 //#define DEBUG_STDOUT
 //#define DEBUG_MESSAGES
 
 #include "debug.h"
+#include "numerics_verbose.h"
 
 #pragma GCC diagnostic ignored "-Wmissing-prototypes"
 
@@ -201,72 +203,21 @@ void soclcp_nsgs_computeqLocal(SecondOrderConeLinearComplementarityProblem * pro
   /* r current block set to zero, to exclude current cone block */
   int i;
   double * rsave = options->dWork;
-  for(i = 0; i < dim; i++)
-  {
-    rsave[i] = r[normal + i];
-    r[normal + i] = 0.0;
-  }
 
   /* qLocal computation*/
   for(i = 0; i < dim; i++)
   {
     qLocal[i] = problem->q[normal +i];
   }
-  
-  if(problem->M->storageType == 0)
-  {
-    double * MM = problem->M->matrix0;
-    int incx = n, incy = 1;
-    for(i = 0; i < dim; i++)
-    {
-      qLocal[i] += cblas_ddot(n , &MM[normal+i] , incx , r , incy);
-    }
-  }
-  else if(problem->M->storageType == 1)
-  {
-    /* qLocal += rowMB * r
-    with rowMB the row of blocks of MGlobal which corresponds to the current cone
-    */
-    DEBUG_PRINTF("dim= %i\n", dim);
-    SBM_row_prod_no_diag(n, dim, cone, problem->M->matrix1, r, qLocal, 0);
-  }
-  for(int i = 0; i < dim; i++)
-  {
-    r[normal + i]=  rsave[i];
-  }
+
+  NM_row_prod_no_diag(n, dim, cone, normal, problem->M, r, qLocal, rsave, false);
 }
 
 void soclcp_nsgs_fillMLocal(SecondOrderConeLinearComplementarityProblem * problem,
                             SecondOrderConeLinearComplementarityProblem * localproblem, int cone)
 {
-
-  NumericsMatrix * MGlobal = problem->M;
-
-  int n = problem->n;
-
-  int storageType = MGlobal->storageType;
-  if(storageType == 0)
-    // Dense storage
-  {
-    int normal = problem->coneIndex[cone];
-    int dim = problem->coneIndex[cone+1]-problem->coneIndex[cone+1];
-    int inc = n * normal;
-    double * MM = MGlobal->matrix0;
-    double * MLocal =  localproblem->M->matrix0;
-    /* The part of MM which corresponds to the current block is copied into MLocal */
-    for(int j =0; j< dim; j++)
-    {
-      for(int i = 0; i < dim; i++)  MLocal[i+j*dim] = MM[inc + normal+i];
-      inc += n;
-    }
-  }
-  else if(storageType == 1)
-  {
-    int diagPos = getDiagonalBlockPos(MGlobal->matrix1, cone);
-    localproblem->M->matrix0 = MGlobal->matrix1->block[diagPos];
-  }
-  else
-    numericsError("soclcp_projection -", "unknown storage type for matrix M");
+  int coneStart = problem->coneIndex[cone];
+  NM_extract_diag_block(problem->M, cone, coneStart, problem->coneIndex[cone+1] - coneStart, &localproblem->M->matrix0);
 }
 
 /* swap two indices */
@@ -295,7 +246,7 @@ void soclcp_nsgs(SecondOrderConeLinearComplementarityProblem* problem, double *r
 
   if(options->numberOfInternalSolvers < 1)
   {
-    numericsError("soclcp_nsgs", "The NSGS method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
+    numerics_error("soclcp_nsgs", "The NSGS method needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
   }
   assert(&options[1]);
 
@@ -334,14 +285,14 @@ void soclcp_nsgs(SecondOrderConeLinearComplementarityProblem* problem, double *r
     localproblem->coneIndex[0]=0;
     localproblem->coneIndex[1]=dim_max;
 
-    if(problem->M->storageType == 0)
+    if (problem->M->storageType != NM_SPARSE_BLOCK)
     {
-      localproblem->M = createNumericsMatrixFromData(NM_DENSE, dim_max, dim_max,
+      localproblem->M = NM_create_from_data(NM_DENSE, dim_max, dim_max,
                         malloc(dim_max*dim_max* sizeof(double)));
     }
     else
     {
-      localproblem->M = newNumericsMatrix();
+      localproblem->M = NM_new();
     }
   }
   else
@@ -384,7 +335,7 @@ void soclcp_nsgs(SecondOrderConeLinearComplementarityProblem* problem, double *r
       /* Loop through the cone  */
       //cblas_dcopy( n , q , incx , v , incy );
       error = 0.0;
-      for (int i =0; i < n; i++) rold[i] = r[i];
+      memcpy(rold, r, n * sizeof(double));
       for(unsigned int i= 0 ; i < nc ; ++i)
       {
         if(iparam[9])
@@ -445,7 +396,7 @@ void soclcp_nsgs(SecondOrderConeLinearComplementarityProblem* problem, double *r
         while((iter < itermax) && (hasNotConverged > 0))
         {
           ++iter;
-          for (int i =0; i < n; i++) rold[i] = r[i];
+          memcpy(rold, r, n * sizeof(double));
           /* Loop through the cone points */
           //cblas_dcopy( n , q , incx , v , incy );
           for(unsigned int i= 0 ; i < nc ; ++i)
@@ -623,14 +574,9 @@ void soclcp_nsgs(SecondOrderConeLinearComplementarityProblem* problem, double *r
 
   /***** Free memory *****/
   (*freeSolver)(problem,localproblem,localsolver_options);
-  /* freeNumericsMatrix(localproblem->M); */
-  
-  if(problem->M->storageType == 0 && localproblem->M->matrix0 != NULL)
-  {
-    free(localproblem->M->matrix0);
-  }
-  localproblem->M->matrix0 = NULL;
-  
+
+  if(problem->M->storageType == NM_SPARSE_BLOCK)  localproblem->M->matrix0 = NULL;
+
   freeSecondOrderConeLinearComplementarityProblem(localproblem);
 
   if(scones)  /* shuffle */

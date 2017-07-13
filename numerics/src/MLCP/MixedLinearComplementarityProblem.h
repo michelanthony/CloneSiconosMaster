@@ -99,7 +99,9 @@
 
 */
 
-#include "NumericsMatrix.h"
+#include <stdio.h>
+#include "NumericsFwd.h"
+#include "SiconosConfig.h"
 
 /** \struct MixedLinearComplementarityProblem MixedLinearComplementarityProblem.h
  *  The Structure that contains and defines  \ref MLCProblem. Find \f$(z,w)\f$ such that:\n
@@ -132,7 +134,7 @@
  * \f$ v, w_{2}\f$ are vectors of size m.
  * See \ref MLCProblem for more details.
  */
-typedef struct
+struct MixedLinearComplementarityProblem
 {
   int isStorageType1; /**< boolean for storageType1 1 if the problem
                          is saved using (M,q),  0 otherwise */
@@ -158,7 +160,7 @@ typedef struct
   double *D; /**< D matrix of the MLCP */
   double *a; /**< a vector of the MLCP */
   double *b; /**< b vector of the MLCP */
-} MixedLinearComplementarityProblem;
+};
 
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)
@@ -210,6 +212,10 @@ extern "C"
    */
   void freeMixedLinearComplementarityProblem(MixedLinearComplementarityProblem* problem);
 
+  /** create empty MLCP
+   * \return empy MLCP
+   */
+  MixedLinearComplementarityProblem* newMLCP(void);
 
 
 #if defined(__cplusplus) && !defined(BUILD_AS_CPP)

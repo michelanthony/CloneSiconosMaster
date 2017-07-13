@@ -22,9 +22,12 @@
 #include <math.h>
 #include <float.h>
 #include <assert.h>
-
+#include "NumericsMatrix.h"
 #include "fc2d_Solvers.h"
 #include "SiconosLapack.h"
+#include "numerics_verbose.h"
+
+
 void fc2d_latin(FrictionContactProblem* problem , double *reaction , double *velocity , int *info, SolverOptions* options)
 {
   int nc = problem->numberOfContacts;
@@ -35,9 +38,9 @@ void fc2d_latin(FrictionContactProblem* problem , double *reaction , double *vel
 
 
 
-  int info77 = 0;
+  lapack_int info77 = 0;
   int i, j, kk, ddl, nrhs;
-  int info2 = 0;
+  lapack_int info2 = 0;
   int n = 2 * nc;
   size_t idim, nbno, ino;
   int incx = 1, incy = 1;

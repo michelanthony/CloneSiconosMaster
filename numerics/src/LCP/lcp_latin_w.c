@@ -21,8 +21,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
+#include "numerics_verbose.h"
+#include "LinearComplementarityProblem.h"
 #include "LCP_Solvers.h"
+#include "lcp_cst.h"
+#include "SolverOptions.h"
+#include "NumericsMatrix.h"
+
+#include "numerics_verbose.h"
 
 void lcp_latin_w(LinearComplementarityProblem* problem, double *z, double *w, int *info , SolverOptions* options)
 {
@@ -41,7 +47,7 @@ void lcp_latin_w(LinearComplementarityProblem* problem, double *z, double *w, in
   double omega = options->dparam[3];
 
   int i, j,  iter1, nrhs;
-  int info2 = 0;
+  lapack_int info2 = 0;
   int      itt, it_end;
   int incx, incy;
 

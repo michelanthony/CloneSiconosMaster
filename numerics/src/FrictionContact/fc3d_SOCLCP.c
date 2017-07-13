@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <string.h>
+
 //#define VERBOSE_DEBUG
 #include "Friction_cst.h"
 #include "SiconosBlas.h"
@@ -32,7 +34,7 @@
 #define DEBUG_MESSAGES
 #define DEBUG_STDOUT
 #include "debug.h"
-
+#include "numerics_verbose.h"
 
 
 /** pointer to function used to call internal solver for proximal point solver */
@@ -49,13 +51,13 @@ void fc3d_SOCLCP(FrictionContactProblem* problem, double *reaction, double *velo
 
   /* Tolerance */
   double tolerance = dparam[0];
-  double normq = cblas_dnrm2(nc*3 , problem->q , 1);
+  double norm_q = cblas_dnrm2(nc*3 , problem->q , 1);
  
 
 
   if (options->numberOfInternalSolvers < 1)
   {
-    numericsError("fc3d_SOCLCP", "The SOCLCP for FrictionContactProblem needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
+    numerics_error("fc3d_SOCLCP", "The SOCLCP for FrictionContactProblem needs options for the internal solvers, options[0].numberOfInternalSolvers should be >1");
   }
 
   SolverOptions * internalsolver_options = options->internalSolvers;
@@ -75,16 +77,14 @@ void fc3d_SOCLCP(FrictionContactProblem* problem, double *reaction, double *velo
   SecondOrderConeLinearComplementarityProblem* soclcp = (SecondOrderConeLinearComplementarityProblem *)malloc(sizeof(SecondOrderConeLinearComplementarityProblem));
   soclcp->n = problem->numberOfContacts * problem->dimension;
   soclcp->nc= problem->numberOfContacts;
-  soclcp->M = problem-> M;
+  soclcp->M = problem->M;
   soclcp->q = (double *) malloc(soclcp->n * sizeof(double));
   soclcp->mu = problem->mu;
   soclcp->coneIndex = (unsigned int *) malloc((soclcp->nc+1) * sizeof(unsigned int));
 
-  for (int i=0; i < soclcp->n; i++)
-  {
-    soclcp->q[i]=problem->q[i];
-  }
-  for (int i=0; i < soclcp->nc+1; i++)
+  memcpy(soclcp->q, problem->q, (soclcp->n) * sizeof(double));
+
+  for (int i=0; i <= soclcp->nc; ++i)
   {
     soclcp->coneIndex[i] = 3*i;
   }
@@ -111,7 +111,7 @@ void fc3d_SOCLCP(FrictionContactProblem* problem, double *reaction, double *velo
 
   double real_error=0.0;
 
-  fc3d_compute_error(problem, reaction , velocity, tolerance, options, normq, &real_error);
+  fc3d_compute_error(problem, reaction , velocity, tolerance, options, norm_q, &real_error);
 
   if (options->callback)
   {
