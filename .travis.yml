@@ -1,6 +1,6 @@
 sudo: required
 
-service: docker
+# service: docker
 
 # 
 # for CI driver
@@ -53,6 +53,7 @@ env:
 
   
 before_script:
+  - echo "test build travis on michelanthony github clone"
   - case $TASK in
       *docker=false*)
         pip install lxml;
